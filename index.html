@@ -1804,48 +1804,38 @@
     }
 
     function handleLogin(event) {
-      event.preventDefault();
-      const statusElem = document.getElementById('status-message');
-      const submitBtn = document.getElementById('submitLoginBtn');
+  event.preventDefault();
+  const statusElem = document.getElementById('status-message');
+  const submitBtn = document.getElementById('submitLoginBtn');
+  
+  // PASTE YOUR GOOGLE WEB APP URL HERE
+  const scriptUrl = "https://script.google.com/macros/s/AKfycbwykidwqRbQ73VIpOBt_UEt7GZryqgpwzMELcKNjY0ZcU9gc3r9pv3Su4WN6YeUy433/exec"; 
 
-      statusElem.style.color = 'var(--accent-blue)';
-      statusElem.innerText = 'AUTHENTICATING CREDENTIALS...';
-      submitBtn.disabled = true;
+  statusElem.style.color = 'var(--accent-blue)';
+  statusElem.innerText = 'AUTHENTICATING...';
+  submitBtn.disabled = true;
 
-      const formData = {
-        username: document.getElementById('usernameInput').value.trim(),
-        password: document.getElementById('passwordInput').value.trim()
-      };
+  const u = document.getElementById('usernameInput').value;
+  const p = document.getElementById('passwordInput').value;
 
-      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.processLogin) {
-        google.script.run
-          .withSuccessHandler(function(response) {
-            submitBtn.disabled = false;
-            if (response && response.success) {
-              setLoginSuccess(formData.username);
-            } else {
-              statusElem.style.color = 'var(--error)';
-              statusElem.innerText = response ? response.message : 'Invalid credentials. Please try again.';
-            }
-          })
-          .withFailureHandler(function(err) {
-            submitBtn.disabled = false;
-            statusElem.style.color = 'var(--error)';
-            statusElem.innerText = 'SYSTEM_ERR: ' + (err ? err.message : 'Login failed.');
-          })
-          .processLogin(formData);
+  // We call the 'login' action we just added to your Google Script
+  fetch(`${scriptUrl}?action=login&username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`)
+    .then(res => res.json())
+    .then(response => {
+      submitBtn.disabled = false;
+      if (response && response.success) {
+        setLoginSuccess(u);
       } else {
-        setTimeout(function() {
-          submitBtn.disabled = false;
-          if (formData.username && formData.password) {
-            setLoginSuccess(formData.username);
-          } else {
-            statusElem.style.color = 'var(--error)';
-            statusElem.innerText = 'Please provide valid credentials.';
-          }
-        }, 400);
+        statusElem.style.color = 'var(--error)';
+        statusElem.innerText = response.message || 'Login failed.';
       }
-    }
+    })
+    .catch(err => {
+      submitBtn.disabled = false;
+      statusElem.style.color = 'var(--error)';
+      statusElem.innerText = 'Connection Error: Check Web App URL';
+    });
+}
 
     function setLoginSuccess(username) {
       isAuthenticated = true;
@@ -2037,43 +2027,50 @@
     }
 
     function loadDataServer() {
-      if (!isAuthenticated) return;
-      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.getMetricsData) {
-        google.script.run
-          .withSuccessHandler(function(res) {
-            if (!res) return;
-            datasetCache = res.data || [];
-            thresholdBaselines = res.baselines || {}; 
-            masterHealthCenters = res.dropdowns ? res.dropdowns.healthCenters : [];
-            
-            buildSelectorFromMap("selCenter", ["ALL HEALTH CENTERS"].concat(masterHealthCenters));
-            populateNavdpcpHealthCenters(masterHealthCenters);
-            
-            let diseaseSet = new Set();
-            (res.data || []).forEach(function(item) {
-              if (item.diseaseName) diseaseSet.add(String(item.diseaseName).trim().toUpperCase());
-            });
-            buildSelectorFromDefaultOptions("selDisease", Array.from(diseaseSet).sort(), "All Diseases");
-            
-            const syncEl = document.getElementById("syncTimestamp");
-            if (syncEl && res.syncTime) syncEl.innerHTML = `<i class="fa-solid fa-circle"></i> Synced ` + res.syncTime;
-            runFilterPipeline();
-          })
-          .getMetricsData();
-      }
-    }
+  if (!isAuthenticated) return;
+
+  // 1. PASTE YOUR WEB APP URL FROM GOOGLE SCRIPT HERE
+  const scriptUrl = "https://script.google.com/macros/s/AKfycbwykidwqRbQ73VIpOBt_UEt7GZryqgpwzMELcKNjY0ZcU9gc3r9pv3Su4WN6YeUy433/exec"; 
+
+  // 2. We use fetch instead of google.script.run
+  fetch(`${scriptUrl}?action=getMetrics`)
+    .then(response => response.json())
+    .then(res => {
+      if (!res) return;
+
+      datasetCache = res.data || [];
+      thresholdBaselines = res.baselines || {}; 
+      masterHealthCenters = res.dropdowns ? res.dropdowns.healthCenters : [];
+      
+      buildSelectorFromMap("selCenter", ["ALL HEALTH CENTERS"].concat(masterHealthCenters));
+      populateNavdpcpHealthCenters(masterHealthCenters);
+      
+      let diseaseSet = new Set();
+      (res.data || []).forEach(function(item) {
+        if (item.diseaseName) diseaseSet.add(String(item.diseaseName).trim().toUpperCase());
+      });
+      buildSelectorFromDefaultOptions("selDisease", Array.from(diseaseSet).sort(), "All Diseases");
+      
+      const syncEl = document.getElementById("syncTimestamp");
+      if (syncEl && res.syncTime) syncEl.innerHTML = `<i class="fa-solid fa-circle"></i> Synced ` + res.syncTime;
+      
+      runFilterPipeline();
+    })
+    .catch(err => {
+      console.error("Connection Error:", err);
+      const syncEl = document.getElementById("syncTimestamp");
+      if (syncEl) syncEl.innerText = "Connection Error";
+    });
+}
 
     function loadCaseDurationData() {
-      if (!isAuthenticated) return;
-      const tbody = document.getElementById('duration-table-body');
-      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading dashboard data...</td></tr>';
+  if (!isAuthenticated) return;
+  const scriptUrl = "YOUR_DEPLOY_URL_HERE"; 
 
-      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.getDashboardData) {
-        google.script.run
-          .withSuccessHandler(renderDurationDashboard)
-          .getDashboardData();
-      }
-    }
+  fetch(`${scriptUrl}?action=getDashboard`)
+    .then(res => res.json())
+    .then(renderDurationDashboard);
+}
 
     function renderDurationDashboard(data) {
       if (!data || !data.cases) return;
