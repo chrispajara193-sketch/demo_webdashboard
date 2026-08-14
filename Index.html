@@ -1,0 +1,3084 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QC-DESU District 2 Master Surveillance Portal</title>
+  <base target="_top" />
+
+  <!-- External Stylesheets & Libraries -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #dbeafe;
+      --bg-header: #ffffff;
+      --bg-navbar: #0a192f;
+      --bg-filter: #e1eef9;
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-tertiary: #64748b;
+      --text-light: #ffffff;
+      --border-color: #d0e3f2;
+      --border-filter: #c2dcf0;
+      --filter-text: #034b6e;
+      --card-shadow: 0 4px 20px -2px rgba(2, 132, 199, 0.06), 0 2px 6px -1px rgba(2, 132, 199, 0.04);
+      --card-hover-shadow: 0 12px 28px -4px rgba(2, 132, 199, 0.15), 0 4px 12px -2px rgba(2, 132, 199, 0.08);
+      --accent-blue: #4e79a7;
+      --accent-blue-hover: #3b5f85;
+      --accent-orange: #de7a38;
+      --accent-orange-hover: #c4682c;
+      --teal-card: #244b5e;
+      --data-status-bg: #b8d7e0;
+      --error: #e15759;
+      --error-bg: #fef2f2;
+      --transition-speed: 0.3s;
+      --ease-curve: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    html[data-theme="dark"] {
+      --bg-primary: #0b1523;
+      --bg-secondary: #132238;
+      --bg-tertiary: #020617;
+      --bg-header: #132238;
+      --bg-navbar: #050c18;
+      --bg-filter: #1e3352;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-tertiary: #94a3b8;
+      --text-light: #ffffff;
+      --border-color: #223c5e;
+      --border-filter: #2e4d75;
+      --filter-text: #f1f5f9;
+      --error-bg: #450a0a;
+      --data-status-bg: #162b44;
+      --teal-card: #15303c;
+      --card-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.3);
+      --card-hover-shadow: 0 16px 32px -4px rgba(0, 0, 0, 0.5);
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: system-ui, -apple-system, sans-serif;
+      transition: background-color var(--transition-speed) var(--ease-curve), color var(--transition-speed) var(--ease-curve);
+      overflow-x: hidden;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /* TOAST NOTIFIER */
+    #globalToast {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9999;
+      padding: 12px 20px;
+      border-radius: 8px;
+      background-color: var(--bg-navbar);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      border-left: 4px solid var(--accent-orange);
+      display: none;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .top-header {
+      background: var(--bg-header);
+      padding: 10px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      z-index: 1000;
+      position: relative;
+    }
+
+    .logo-container { display: flex; align-items: center; gap: 12px; }
+    .brand-logo-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #de7a38 0%, #4e79a7 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 20px;
+      box-shadow: 0 2px 8px rgba(78, 121, 167, 0.3);
+    }
+    .brand-title-wrap { display: flex; flex-direction: column; }
+    .brand-main-title { font-size: 18px; font-weight: 900; letter-spacing: -0.3px; color: var(--text-primary); line-height: 1.1; }
+    .brand-main-title span { color: var(--accent-orange); }
+    .brand-sub-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-tertiary); }
+    .right-controls { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+
+    .sync-badge {
+      background-color: var(--bg-filter);
+      border: 1px solid var(--border-filter);
+      border-radius: 30px;
+      padding: 6px 14px;
+      font-size: 11px;
+      color: var(--filter-text);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sync-badge i { color: #10b981; font-size: 8px; }
+
+    .header-btn {
+      background-color: var(--accent-blue);
+      color: #ffffff;
+      border: none;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.25s var(--ease-curve);
+      position: relative;
+      z-index: 10;
+    }
+    .header-btn:hover { background-color: var(--accent-blue-hover); transform: translateY(-2px); }
+
+    .theme-toggle-btn {
+      background-color: var(--bg-filter);
+      color: var(--filter-text);
+      border: 1px solid var(--border-filter);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .app-navbar {
+      background-color: var(--bg-navbar);
+      color: #ffffff;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 50px;
+      box-shadow: 0 4px 12px rgba(10, 25, 47, 0.15);
+      position: relative;
+      z-index: 900;
+    }
+    .app-navbar h1 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; }
+
+    .nav-links { display: flex; gap: 4px; height: 100%; align-items: center; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      height: 100%;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      transition: all 0.25s var(--ease-curve);
+      white-space: nowrap;
+      user-select: none;
+    }
+    .nav-item:hover, .nav-item.active {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-bottom-color: var(--accent-orange);
+    }
+
+    .nav-item.protected-nav {
+      max-width: 0;
+      opacity: 0;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      margin: 0;
+      overflow: hidden;
+      pointer-events: none;
+      transform: translateY(-6px) scale(0.96);
+      transition: max-width 0.5s var(--ease-curve), opacity 0.4s ease, padding 0.4s ease, transform 0.45s var(--ease-curve);
+      white-space: nowrap;
+    }
+    .nav-item.protected-nav.revealed {
+      max-width: 260px;
+      opacity: 1;
+      padding: 0 16px !important;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+
+    .nav-item-login {
+      background-color: rgba(222, 122, 56, 0.2);
+      color: #de7a38 !important;
+      border-radius: 6px;
+      height: 32px;
+      margin-left: 8px;
+      padding: 0 14px;
+      border-bottom: none !important;
+      transition: all 0.3s var(--ease-curve);
+    }
+    .nav-item-login:hover { background-color: var(--accent-orange) !important; color: #ffffff !important; }
+
+    .nav-item-logout {
+      background-color: rgba(239, 68, 68, 0.15);
+      color: #f87171 !important;
+      border-radius: 6px;
+      height: 32px;
+      margin-left: 8px;
+      padding: 0 14px;
+      border-bottom: none !important;
+      transition: all 0.3s var(--ease-curve);
+    }
+    .nav-item-logout:hover { background-color: #ef4444 !important; color: #ffffff !important; }
+
+    .view-container { animation-duration: 0.4s; animation-timing-function: var(--ease-curve); animation-fill-mode: forwards; }
+    .slide-from-right { animation-name: animSlideFromRight; }
+    .slide-from-left { animation-name: animSlideFromLeft; }
+
+    @keyframes animSlideFromRight { 0% { opacity: 0; transform: translateX(30px); } 100% { opacity: 1; transform: translateX(0); } }
+    @keyframes animSlideFromLeft { 0% { opacity: 0; transform: translateX(-30px); } 100% { opacity: 1; transform: translateX(0); } }
+
+    .dashboard-container { display: flex; flex-direction: column; min-height: calc(100vh - 100px); position: relative; }
+    .sidebar-panel {
+      width: 100%;
+      min-width: 0;
+      background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%);
+      padding: 16px 28px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      box-shadow: 0 4px 14px rgba(78, 121, 167, 0.08);
+      border-bottom: 1px solid #bfdbfe;
+      max-height: 300px;
+      opacity: 1;
+      transform: translateY(0);
+      overflow: hidden;
+      transition: max-height 0.4s var(--ease-curve), opacity 0.3s ease, transform 0.4s var(--ease-curve);
+    }
+    .sidebar-panel.slide-out {
+      max-height: 0 !important;
+      opacity: 0 !important;
+      transform: translateY(-20px) !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      border-bottom-width: 0 !important;
+      pointer-events: none;
+    }
+    html[data-theme="dark"] .sidebar-panel { background: #0f2537; border-bottom-color: #1e3a8a; }
+
+    .content-panel { flex-grow: 1; padding: 0; overflow-x: hidden; position: relative; }
+
+    .filter-pill-card {
+      background-color: #ffffff;
+      border-radius: 12px;
+      padding: 10px 18px;
+      border: 1px solid #bfdbfe;
+      flex: 1 1 240px;
+      max-width: 320px;
+      box-shadow: 0 2px 6px rgba(78, 121, 167, 0.05);
+    }
+    html[data-theme="dark"] .filter-pill-card { background-color: var(--bg-filter); border-color: var(--border-filter); }
+    .filter-pill-card label { font-size: 11px; font-weight: 800; color: #3b5f85; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 2px; display: block; }
+    html[data-theme="dark"] .filter-pill-card label { color: var(--filter-text); }
+    .filter-pill-select { width: 100%; background: transparent; border: none; font-size: 13px; font-weight: 700; color: #0f172a; outline: none; }
+    html[data-theme="dark"] .filter-pill-select { color: var(--filter-text); }
+    .filter-pill-select option { background-color: var(--bg-secondary); color: var(--text-primary); }
+
+    #healthCenterFilterCard.hidden { max-width: 0; flex: 0 0 0; opacity: 0; padding: 0; margin: 0; border: none; visibility: hidden; }
+    #healthCenterFilterCard.visible { max-width: 320px; flex: 1 1 240px; opacity: 1; padding: 10px 18px; visibility: visible; }
+
+    .sidebar-clear-btn {
+      height: 42px;
+      padding: 0 20px;
+      border-radius: 10px;
+      background-color: var(--accent-blue);
+      color: #ffffff;
+      border: none;
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.25s var(--ease-curve);
+    }
+    .sidebar-clear-btn:hover { background-color: #e15759; }
+
+    /* ==========================================================================
+       HERO BANNER - FULL-FIT IMAGE ASSET SIZING
+       ========================================================================== */
+    .home-hero-wrap {
+      background: #142838 url('https://lh3.googleusercontent.com/d/1MSTAUzjdoEIebzTX4m0jftfDPPZ0J3e2') center center / 100% 100% no-repeat;
+      color: #ffffff;
+      padding: 40px 36px;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 2px solid rgba(222, 122, 56, 0.35);
+      min-height: 440px;
+      display: flex;
+      align-items: center;
+    }
+
+    @media (max-width: 991px) {
+      .home-hero-wrap {
+        background-size: cover;
+        background-position: center center;
+        min-height: 380px;
+      }
+    }
+
+    .home-hero-wrap::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; bottom: 0; width: 38%;
+      background: linear-gradient(90deg, rgba(16, 34, 53, 0.78) 0%, rgba(16, 34, 53, 0.35) 75%, transparent 100%);
+      pointer-events: none !important;
+      z-index: 1;
+    }
+
+    .home-hero-content {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+    }
+
+    .hero-title-badge {
+      color: #de7a38;
+      font-size: 1.35rem;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      line-height: 1.25;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+
+    .hero-title-main {
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+
+    .hero-subtitle {
+      font-size: 0.90rem;
+      color: #cbd8e2;
+      max-width: 420px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+    
+    .btn-view-latest {
+      background-color: #d68047;
+      color: #ffffff;
+      border: none;
+      padding: 11px 26px;
+      border-radius: 24px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(214, 128, 71, 0.4);
+      transition: all 0.25s var(--ease-curve);
+      position: relative;
+      z-index: 20;
+    }
+    .btn-view-latest:hover {
+      background-color: #c46f36;
+      color: #ffffff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(214, 128, 71, 0.5);
+    }
+
+    .home-body-wrap {
+      padding: 36px 40px;
+      background: #fbf8f1;
+      position: relative;
+      z-index: 5;
+    }
+    .intro-header-title {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: #1a2e40;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+    }
+    .intro-desc-text {
+      font-size: 0.88rem;
+      color: #556677;
+      max-width: 650px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .avatar-group-img { display: flex; align-items: center; justify-content: flex-end; }
+    .avatar-icon-pill {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      background: #e2effa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-blue);
+      font-size: 22px;
+      margin-left: -12px;
+      box-shadow: var(--card-shadow);
+    }
+
+    .home-mission-card {
+      background-color: #244b5e;
+      color: #ffffff;
+      border-radius: 14px;
+      padding: 26px 28px;
+      height: 100%;
+      box-shadow: 0 4px 16px rgba(36, 75, 94, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .card-header-badge-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .circle-icon-amber {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #de7a38 0%, #c4682c 100%);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .card-main-heading {
+      font-size: 1.05rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0;
+    }
+    .mission-subhead {
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: #ffd8be;
+      margin-bottom: 4px;
+    }
+    .mission-body-text {
+      font-size: 0.84rem;
+      color: #d4e4ed;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    /* VIDEO CARD & DIRECT EMBED PLAYER */
+    .home-video-card {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 24px 26px;
+      height: 100%;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e7e2d6;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .video-embed-container {
+      position: relative;
+      width: 100%;
+      min-height: 230px;
+      flex-grow: 1;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #111e2a;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+    }
+    
+    .video-embed-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .video-footer-caption {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #1d2d3d;
+      margin-top: 14px;
+      margin-bottom: 0;
+    }
+
+    .data-status-section {
+      background-color: #b8d7e0;
+      padding: 28px 40px;
+      margin-top: 0;
+      border-top: 1px solid #a8cad4;
+    }
+    .data-status-title {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: #193043;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 16px;
+    }
+    .data-status-card {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 14px 18px;
+      border: 1px solid #e1ebef;
+      box-shadow: 0 2px 8px rgba(25, 48, 67, 0.06);
+      cursor: pointer;
+      transition: all 0.25s var(--ease-curve);
+      height: 100%;
+      user-select: none;
+    }
+    .data-status-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(25, 48, 67, 0.12);
+      border-color: #de7a38;
+    }
+    .data-status-label {
+      font-size: 0.74rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      color: #273c4d;
+      margin-bottom: 4px;
+    }
+    .data-status-val {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #5c7182;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .home-footer {
+      background-color: #142838;
+      color: #8da4b7;
+      padding: 16px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .home-footer a {
+      color: #cbd8e2;
+      text-decoration: none;
+      margin-right: 14px;
+    }
+    .home-footer a:hover {
+      color: #ffffff;
+    }
+
+    /* LOGIN VIEW */
+    .login-container-wrapper {
+      min-height: calc(100vh - 140px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      background: var(--bg-primary);
+    }
+    
+    .login-box {
+      width: 100%;
+      max-width: 440px;
+      padding: 40px 36px;
+      background: var(--bg-secondary);
+      border-radius: 18px;
+      box-shadow: 0 12px 35px -4px rgba(78, 121, 167, 0.15), 0 4px 12px -2px rgba(0,0,0,0.06);
+      border: 1px solid var(--border-color);
+      text-align: center;
+      margin: auto;
+    }
+    
+    .login-icon-badge {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(78, 121, 167, 0.15) 0%, rgba(222, 122, 56, 0.15) 100%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-blue);
+      font-size: 26px;
+      margin-bottom: 16px;
+    }
+    
+    .login-box .header h2 {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      letter-spacing: -0.3px;
+    }
+    
+    .login-box .header p {
+      font-size: 0.85rem;
+      color: var(--text-tertiary);
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+    
+    .login-input-group {
+      margin-bottom: 18px;
+      text-align: left;
+    }
+    
+    .login-input-group label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--accent-blue);
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      display: block;
+    }
+    
+    .login-input-group input {
+      width: 100%;
+      height: 46px;
+      padding: 10px 16px;
+      background: var(--bg-primary);
+      border: 1.5px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 0.92rem;
+      color: var(--text-primary);
+      font-weight: 600;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    
+    .login-input-group input:focus {
+      border-color: var(--accent-blue);
+      background: var(--bg-secondary);
+      box-shadow: 0 0 0 4px rgba(78, 121, 167, 0.15);
+    }
+    
+    .password-field-wrap {
+      position: relative;
+      width: 100%;
+      display: block;
+    }
+    
+    .password-field-wrap input {
+      width: 100%;
+      padding-right: 48px !important;
+    }
+    
+    .password-toggle-btn {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      outline: none;
+    }
+    .password-toggle-btn:hover { color: var(--accent-blue); }
+
+    .btn-login {
+      width: 100%;
+      height: 48px;
+      background: var(--accent-blue);
+      border: none;
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 800;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 14px rgba(78, 121, 167, 0.3);
+      margin-top: 10px;
+    }
+    .btn-login:hover {
+      background: var(--accent-blue-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(78, 121, 167, 0.4);
+    }
+    .btn-login:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    #status-message {
+      margin-top: 18px;
+      font-size: 0.85rem;
+      text-align: center;
+      font-weight: 700;
+      min-height: 22px;
+    }
+
+    /* INTERNAL VIEWS & METRICS */
+    .main-view-wrapper { padding: 24px; }
+    .metric-card { background: var(--bg-secondary); border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); border-top: 4px solid #94a3b8; box-shadow: var(--card-shadow); height: 100%; transition: transform 0.3s; }
+    .metric-card:hover { transform: translateY(-4px); }
+    .m-blue { border-top-color: #4e79a7; }
+    .m-green { border-top-color: #10b981; }
+    .m-orange { border-top-color: #f59e0b; }
+    .m-teal { border-top-color: #14b8a6; }
+    .m-red { border-top-color: #e15759; }
+    .card-title { font-size: 11px; font-weight: 800; color: var(--text-tertiary); text-transform: uppercase; }
+    .card-num { font-size: 32px; font-weight: 800; color: var(--text-primary); margin: 8px 0; line-height: 1; }
+    .card-label { font-size: 12px; font-weight: 600; color: var(--text-tertiary); }
+    
+    .chart-card, .demog-card, .narrative-card, .portal-card {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      margin-bottom: 24px;
+    }
+    
+    .narrative-card { border-left: 5px solid #4e79a7; }
+    .narrative-title { font-size: 13px; font-weight: 800; color: #4e79a7; text-transform: uppercase; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .narrative-p { font-size: 13px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 0; }
+    .highlight-data { font-weight: 700; color: var(--filter-text); background-color: var(--bg-filter); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border-filter); display: inline-block; margin: 1px 2px; }
+    .chart-header-title { font-size: 13px; font-weight: 800; color: var(--text-primary); margin-bottom: 16px; letter-spacing: 0.4px; }
+    
+    /* MAP CONTAINER & OVERLAY */
+    #mapContainer { height: 440px; width: 100%; border-radius: 12px; border: 1px solid var(--border-color); z-index: 1; background: #e5e7eb; }
+    .map-legend-overlay { background: var(--bg-secondary); padding: 10px 14px; border-radius: 8px; box-shadow: var(--card-hover-shadow); font-size: 11px; line-height: 1.6; color: var(--text-secondary); border: 1px solid var(--border-color); }
+    .legend-bullet { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
+
+    /* TABLES */
+    .duration-table-wrapper, .portal-table-wrapper { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--card-shadow); overflow-x: auto; }
+    .duration-table, .portal-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .duration-table th, .portal-table th { background: var(--bg-filter); color: var(--filter-text); font-size: 11px; font-weight: 800; text-transform: uppercase; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+    .duration-table td, .portal-table td { padding: 10px 14px; color: var(--text-primary); border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+    .duration-table tr:hover, .portal-table tr:hover { background-color: var(--bg-filter); }
+    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; }
+    .badge-under24 { background-color: #d1fae5; color: #065f46; }
+    .badge-2448 { background-color: #fef3c7; color: #92400e; }
+    .badge-over48 { background-color: #fee2e2; color: #991b1b; }
+
+    /* FULL MASTER FORM */
+    .portal-section-title {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #3b5f85;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 22px 0 12px 0;
+      padding-bottom: 4px;
+      border-bottom: 2px solid #bfdbfe;
+    }
+    .portal-section-title:first-of-type { margin-top: 0; }
+    
+    .portal-form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+    }
+    
+    .portal-form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .portal-form-group label {
+      font-weight: 800;
+      font-size: 0.70rem;
+      margin-bottom: 4px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    
+    .portal-form-group input, 
+    .portal-form-group select {
+      padding: 7px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.82rem;
+      outline: none;
+      background-color: #ffffff;
+      color: var(--text-primary);
+      width: 100%;
+      height: 38px;
+    }
+
+    html[data-theme="dark"] .portal-form-group input,
+    html[data-theme="dark"] .portal-form-group select {
+      background-color: var(--bg-secondary);
+      border-color: var(--border-color);
+    }
+    
+    .portal-actions { margin-top: 24px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .btn-submit { background-color: var(--accent-blue); color: white; border: none; padding: 9px 24px; border-radius: 6px; font-weight: 800; font-size: 0.85rem; cursor: pointer; }
+    .btn-submit:hover { background-color: var(--accent-blue-hover); }
+    .btn-json { background-color: #334155; color: white; border: none; padding: 9px 18px; border-radius: 6px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-cancel { background-color: #64748b; color: white; border: none; padding: 9px 20px; border-radius: 6px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: none; }
+    .btn-edit { background-color: #f59e0b; color: white; border: none; padding: 3px 8px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer; }
+    .sticky-actions { position: sticky; left: 0; background: var(--bg-secondary); z-index: 5; }
+  </style>
+</head>
+<body>
+
+  <!-- TOAST NOTIFIER -->
+  <div id="globalToast">
+    <i class="fa-solid fa-circle-info text-warning"></i>
+    <span id="globalToastMsg">Notification</span>
+  </div>
+
+  <!-- TOP HEADER -->
+  <div class="top-header">
+    <div class="logo-container">
+      <div class="brand-logo-badge"><i class="fa-solid fa-earth-asia"></i></div>
+      <div class="brand-title-wrap">
+        <div class="brand-main-title">DISTRICT <span>2</span></div>
+        <div class="brand-sub-title">Epidemiology & Surveillance Division</div>
+      </div>
+    </div>
+
+    <div class="right-controls">
+      <div class="sync-badge" id="syncTimestamp"><i class="fa-solid fa-circle"></i> Synced --:-- --</div>
+      <button class="theme-toggle-btn" type="button" onclick="toggleTheme()" id="themeBtn">
+        <i class="fa-solid fa-moon"></i> <span>Dark</span>
+      </button>
+      <button class="header-btn" type="button" onclick="refreshPortalData()">
+        <i class="fa-solid fa-arrows-rotate"></i> Refresh Data
+      </button>
+    </div>
+  </div>
+
+  <!-- NAVIGATION BAR -->
+  <div class="app-navbar">
+    <h1><i class="fa-solid fa-shield-halved me-1 text-warning"></i> Surveillance Portal</h1>
+    <div class="nav-links" id="navLinksContainer">
+      <div class="nav-item active" id="tab-home" onclick="switchTab('home')">
+        <i class="fa-solid fa-house me-2"></i>HOME
+      </div>
+      <div class="nav-item protected-nav" id="tab-overview" onclick="switchTab('overview')">
+        <i class="fa-solid fa-border-all me-2"></i>DASHBOARD
+      </div>
+      <div class="nav-item protected-nav" id="tab-duration" onclick="switchTab('duration')">
+        <i class="fa-solid fa-clock-history me-2"></i>FEEDBACK MONITORING
+      </div>
+      <div class="nav-item protected-nav" id="tab-navdpcp" onclick="switchTab('navdpcp')">
+        <i class="fa-solid fa-notes-medical me-2"></i>D2 NAVDPCP 2026
+      </div>
+      <div class="nav-item protected-nav" id="tab-masterdb" onclick="switchTab('masterdb')">
+        <i class="fa-solid fa-database me-2"></i>PATIENT PROFILE
+      </div>
+      <div class="nav-item nav-item-login" id="tab-login" onclick="handleLoginNavClick()">
+        <i class="fa-solid fa-arrow-right-to-bracket me-2" id="navLoginIcon"></i>
+        <span id="navLoginText">LOGIN</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD CONTAINER -->
+  <div class="dashboard-container">
+    <div class="sidebar-panel slide-out" id="sidebarPanel">
+      <div class="filter-pill-card">
+        <label for="selBarangay">Barangay</label>
+        <select class="filter-pill-select" id="selBarangay" onchange="onBarangayChanged()">
+          <option value="All Barangay">All Barangay</option>
+          <option value="COMMONWEALTH">Commonwealth</option>
+          <option value="BATASAN HILLS">Batasan Hills</option>
+          <option value="HOLY SPIRIT">Holy Spirit</option>
+          <option value="PAYATAS">Payatas</option>
+          <option value="BAGONG SILANGAN">Bagong Silangan</option>
+        </select>
+      </div>
+
+      <div class="filter-pill-card hidden" id="healthCenterFilterCard">
+        <label for="selCenter">Health Center</label>
+        <select class="filter-pill-select" id="selCenter" onchange="onHealthCenterChanged()">
+          <option value="ALL HEALTH CENTERS">ALL HEALTH CENTERS</option>
+        </select>
+      </div>
+
+      <div class="filter-pill-card visible" id="categoryFilterCard">
+        <label for="selCategory">Category</label>
+        <select class="filter-pill-select" id="selCategory" onchange="onCategoryChanged()">
+          <option value="All Categories">All Categories</option>
+          <option value="Suspect">Suspect</option>
+          <option value="Probable">Probable</option>
+          <option value="Confirmed">Confirmed</option>
+        </select>
+      </div>
+
+      <div class="filter-pill-card visible" id="remarksFilterCard">
+        <label for="selRemarks">Investigation Remarks</label>
+        <select class="filter-pill-select" id="selRemarks" onchange="onRemarksChanged()">
+          <option value="All Remarks">All Remarks</option>
+          <option value="DONE">DONE</option>
+          <option value="PENDING">PENDING</option>
+        </select>
+      </div>
+
+      <div class="filter-pill-card visible" id="outcomeFilterCard">
+        <label for="selOutcome">Outcome</label>
+        <select class="filter-pill-select" id="selOutcome" onchange="runFilterPipeline()">
+          <option value="All Outcomes">All Outcomes</option>
+          <option value="ALIVE">ALIVE</option>
+          <option value="DEATH">DEATH</option>
+        </select>
+      </div>
+
+      <button class="sidebar-clear-btn" type="button" onclick="resetActiveFilters()">
+        <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+      </button>
+    </div>
+
+    <div class="content-panel">
+      <!-- VIEW 0: HOME PAGE -->
+      <div id="view-home" class="view-container">
+        <!-- HERO BANNER -->
+        <div class="home-hero-wrap">
+          <div class="home-hero-content">
+            <div class="row align-items-center g-4">
+              <div class="col-12 col-lg-5 col-xl-4">
+                <div class="hero-title-badge">PROTECTING DISTRICT 2 |</div>
+                <div class="hero-title-main">EPIDEMIOLOGY & SURVEILLANCE DIVISION</div>
+                <div class="hero-subtitle">Real-time health insights and data-driven action for a healthier community.</div>
+                <button class="btn-view-latest" type="button" onclick="switchTab('overview')">
+                  VIEW LATEST DATA <i class="fa-solid fa-chevron-right ms-1"></i>
+                </button>
+              </div>
+              <div class="col-12 col-lg-7 col-xl-8 d-flex justify-content-center justify-content-lg-end">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-body-wrap">
+          <div class="row align-items-center mb-4">
+            <div class="col-12 col-md-8">
+              <div class="intro-header-title">INTRODUCTION TO ESD</div>
+              <div class="intro-desc-text">Our dedicated team monitors health trends, investigates outbreaks, and implements strategies to prevent disease spread in District 2.</div>
+            </div>
+            <div class="col-12 col-md-4 d-none d-md-block">
+              <div class="avatar-group-img">
+                <div class="avatar-icon-pill" title="Doctor"><i class="fa-solid fa-user-doctor"></i></div>
+                <div class="avatar-icon-pill" title="Surveillance Officer"><i class="fa-solid fa-stethoscope"></i></div>
+                <div class="avatar-icon-pill" title="Data Controller"><i class="fa-solid fa-user-nurse"></i></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-4 mb-4">
+            <div class="col-12 col-lg-6">
+              <div class="home-mission-card">
+                <div class="card-header-badge-row">
+                  <div class="circle-icon-amber"><i class="fa-solid fa-scale-balanced"></i></div>
+                  <h3 class="card-main-heading">MISSION, VISION & GOAL</h3>
+                </div>
+                <div class="mission-subhead">Mission:</div>
+                <p class="mission-body-text">To provide QCitizens with innovative, technology-driven, hybrid, health services through public-private alliance, functional service delivery network & sustainable financing.</p>               
+                <div class="mission-subhead">Vision:</div>
+                <p class="mission-body-text mb-0">QCHD leading in the provision of accessible, available, acceptable quality health care services through public and private partnerships, inclusive of culturally sensitive & research based healthcare services, towards a Healthier Environment.</p>          
+                <div class="mission-subhead">Goal:</div>
+                <p class="mission-body-text">To strengthen health-seeking behavior, increase health service utilization and improve health outcomes through enhanced delivery of comprehensive health care services.</p>
+              </div>
+            </div>
+
+            <!-- PRESENTATION VIDEO CLIP WITH EMBEDDED GOOGLE DRIVE VIDEO PLAYER -->
+            <div class="col-12 col-lg-6">
+              <div class="home-video-card">
+                <div class="card-header-badge-row mb-3">
+                  <div class="circle-icon-amber"><i class="fa-solid fa-clapperboard"></i></div>
+                  <h3 class="card-main-heading" style="color: #1d2d3d;">PRESENTATION VIDEO CLIP</h3>
+                </div>
+                <div class="video-embed-container">
+                  <iframe src="https://drive.google.com/file/d/10WPUpXLYXhRxGAnHp_dVP9JaBMm-yDlN/preview"
+                          allow="autoplay; encrypted-media"
+                          allowfullscreen>
+                  </iframe>
+                </div>
+                <div class="video-footer-caption">Latest Update Briefing: Understanding District 2 Health Landscape</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="data-status-section">
+          <div class="data-status-title">DATA STATUS</div>
+          <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3">
+            <div class="col">
+              <div class="data-status-card" onclick="switchTab('overview')">
+                <div class="data-status-label">ACTIVE CASES (Influenza / Dengue)</div>
+                <div class="data-status-val"><i class="fa-solid fa-chart-line text-primary"></i> Live Trend Active</div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="data-status-card" onclick="switchTab('overview')">
+                <div class="data-status-label">VACCINATION COVERAGE</div>
+                <div class="data-status-val"><i class="fa-solid fa-syringe text-success"></i> Graph • % Distribution</div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="data-status-card" onclick="switchTab('overview')">
+                <div class="data-status-label">OUTBREAK ALERTS</div>
+                <div class="data-status-val"><span class="badge-under24 px-2 py-0 rounded-circle d-inline-block me-1">●</span> Monitored Status</div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="data-status-card" onclick="switchTab('masterdb')">
+                <div class="data-status-label">SURVEILLANCE REPORTS</div>
+                <div class="data-status-val"><i class="fa-solid fa-file-arrow-down text-info"></i> Latest date/download</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-footer">
+          <div><a href="javascript:void(0)">Privacy</a><a href="javascript:void(0)">Contact</a><a href="javascript:void(0)">District 2 Gov</a></div>
+          <div>Copyright: Contact, District 2 Gov</div>
+        </div>
+      </div>
+
+      <!-- VIEW: LOGIN PORTAL -->
+      <div id="view-login" class="view-container" style="display: none;">
+        <div class="login-container-wrapper">
+          <div class="login-box">
+            <div class="login-icon-badge">
+              <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <div class="header">
+              <h2>System Login</h2>
+              <p>District 2 Master Surveillance Portal</p>
+            </div>
+            <form id="loginForm" onsubmit="handleLogin(event)">
+              <div class="login-input-group">
+                <label for="usernameInput">User ID / Email</label>
+                <input type="text" id="usernameInput" placeholder="Enter your username or email" required autocomplete="username" />
+              </div>
+              <div class="login-input-group">
+                <label for="passwordInput">Password</label>
+                <div class="password-field-wrap">
+                  <input type="password" id="passwordInput" placeholder="Enter your password" required autocomplete="current-password" />
+                  <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility()" title="Show/Hide Password">
+                    <i class="fa-solid fa-eye" id="passwordToggleIcon"></i>
+                  </button>
+                </div>
+              </div>
+              <button type="submit" id="submitLoginBtn" class="btn-login">
+                <i class="fa-solid fa-right-to-bracket"></i>
+                <span>Authenticate & Enter</span>
+              </button>
+            </form>
+            <div id="status-message"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 1: OVERVIEW DASHBOARD -->
+      <div id="view-overview" class="view-container main-view-wrapper" style="display: none;">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+          <div class="section-tag fw-bold text-primary"><i class="fa-solid fa-chart-pie me-2"></i>Metrics Summary</div>
+          <div class="inline-filter-wrapper">
+            <select class="form-select form-select-sm" id="selDisease" onchange="runFilterPipeline()" style="min-width: 180px;">
+              <option value="All Diseases">All Diseases</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="metricCardsSection" class="container-fluid p-0 mb-4">
+          <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-5 g-3">
+            <div class="col"><div class="metric-card m-blue"><div class="card-title">Total Reported Cases</div><div class="card-num" id="valTotal">0</div><div class="card-label" id="lblTotal">All Cases</div></div></div>
+            <div class="col"><div class="metric-card m-green"><div class="card-title">Done</div><div class="card-num" id="valDone">0</div><div class="card-label" id="lblDone">0.00% of total</div></div></div>
+            <div class="col"><div class="metric-card m-orange"><div class="card-title">Pending</div><div class="card-num" id="valPending">0</div><div class="card-label" id="lblPending">0.00% of total</div></div></div>
+            <div class="col"><div class="metric-card m-teal"><div class="card-title">Alive</div><div class="card-num" id="valAlive">0</div><div class="card-label" id="lblAlive">0.00% of total</div></div></div>
+            <div class="col"><div class="metric-card m-red"><div class="card-title">Death</div><div class="card-num" id="valDeath">0</div><div class="card-label" id="lblDeath">0.00% of total</div></div></div>
+          </div>
+        </div>
+
+        <!-- GRANULAR SINGLE-DISEASE VIEW -->
+        <div id="granularDiseaseMetricsSection">
+          <div class="chart-card">
+            <div class="chart-header-title" id="chartDynamicTitle">EPIDEMIC TRESHOLD, ALERT TRESHOLD and Current Yr-2026</div>
+            <div style="position: relative; height: 350px; width: 100%;">
+              <canvas id="epiCurveCanvas"></canvas>
+            </div>
+          </div>
+          <div class="row mt-4 g-4">
+            <div class="col-12 col-xl-6">
+              <div class="demog-card" style="height: 100%;">
+                <div class="chart-header-title" id="demogDynamicTitle">Distribution by Age and Sex</div>
+                <div style="position: relative; height: 320px; width: 100%;"><canvas id="demogPyramidCanvas"></canvas></div>
+              </div>
+            </div>
+            <div class="col-12 col-xl-6">
+              <div class="narrative-card" style="height: 100%;">
+                <div class="narrative-title"><i class="fa-solid fa-file-contract me-2"></i> Automated Epidemiological Analysis Report</div>
+                <div class="narrative-p" id="narrativeReportText">Loading dataset analysis summaries...</div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-card mt-4">
+            <div class="chart-header-title" id="mapDynamicTitle">Geospatial Disease Clusters Spot Map</div>
+            <div id="mapContainer"></div>
+          </div>
+        </div>
+
+        <!-- ALL DISEASES VIEW -->
+        <div id="allDiseasesGraphSection">
+          <div class="row mt-4 g-4">
+            <div class="col-12 col-xl-6">
+              <div class="chart-card" style="height: 100%;">
+                <div class="chart-header-title">Breakdown of Investigation Sources</div>
+                <div style="position: relative; height: 320px; width: 100%;"><canvas id="allDiseasesOverviewCanvas"></canvas></div>
+              </div>
+            </div>
+            <div class="col-12 col-xl-6">
+              <div class="chart-card" style="height: 100%;">
+                <div class="chart-header-title">Disease Share Distribution</div>
+                <div style="position: relative; height: 320px; width: 100%;"><canvas id="diseaseSharePieCanvas"></canvas></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AGE GROUP ANALYSIS (PYRAMID STYLE) -->
+        <div id="ageGroupChartSection" class="chart-card mt-4">
+          <div class="chart-header-title">Age Group Analysis of the Cases</div>
+          <div style="position: relative; height: 350px; width: 100%;">
+            <canvas id="ageGroupAnalysisCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- SIDE-BY-SIDE BARANGAY & CLASSIFICATION CARDS -->
+        <div id="barangayAndClassificationSection" class="mt-4">
+          <div class="row g-4">
+            <div class="col-12 col-lg-7" id="barangayDistributionCol">
+              <div class="chart-card h-100 mb-0">
+                <div class="chart-header-title">TOTAL CASES DISTRIBUTION PER BARANGAY</div>
+                <div style="position: relative; height: 320px; width: 100%;">
+                  <canvas id="barangayDistributionCanvas"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-lg-5" id="caseClassificationCol">
+              <div class="chart-card h-100 mb-0">
+                <div class="chart-header-title">CASE CLASSIFICATION</div>
+                <div style="position: relative; height: 320px; width: 100%;">
+                  <canvas id="caseClassificationCanvas"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 2: FEEDBACK MONITORING -->
+      <div id="view-duration" class="view-container main-view-wrapper" style="display: none;">
+        <div class="mb-4 pb-3 border-bottom">
+          <h2 class="h3 font-weight-bold text-primary mb-1">Surveillance Case Duration Dashboard</h2>
+          <p class="text-muted small m-0">Real-time status tracking based on Case Validation Timestamps.</p>
+        </div>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3 mb-4">
+          <div class="col"><div class="metric-card m-blue cursor-pointer" onclick="filterDurationCategory('All')"><div class="card-title">Total Active Cases</div><div class="card-num" id="count-total">0</div></div></div>
+          <div class="col"><div class="metric-card m-green cursor-pointer" onclick="filterDurationCategory('Under 24 Hours')"><div class="card-title">Under 24 Hours</div><div class="card-num text-success" id="count-under24">0</div></div></div>
+          <div class="col"><div class="metric-card m-orange cursor-pointer" onclick="filterDurationCategory('24 to 48 Hours')"><div class="card-title">24 to 48 Hours</div><div class="card-num text-warning" id="count-24-48">0</div></div></div>
+          <div class="col"><div class="metric-card m-red cursor-pointer" onclick="filterDurationCategory('Over 48 Hours')"><div class="card-title">Over 48 Hours</div><div class="card-num text-danger" id="count-over48">0</div></div></div>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+          <div class="d-flex flex-wrap align-items-center gap-3">
+            <select id="durationCategoryFilter" onchange="filterDurationCategory(this.value)" class="form-select form-select-sm" style="width: auto;">
+              <option value="All">All Categories</option>
+              <option value="Under 24 Hours">Under 24 Hours</option>
+              <option value="24 to 48 Hours">24 to 48 Hours</option>
+              <option value="Over 48 Hours">Over 48 Hours</option>
+            </select>
+            <select id="durationHealthCenterFilter" onchange="updateDurationDashboard()" class="form-select form-select-sm" style="width: auto;">
+              <option value="All">All Health Centers</option>
+            </select>
+          </div>
+          <input type="text" id="durationSearchInput" oninput="updateDurationDashboard()" placeholder="Search Case ID or Disease..." class="form-control form-control-sm" style="width: 260px;">
+        </div>
+
+        <div class="duration-table-wrapper">
+          <table class="duration-table">
+            <thead>
+              <tr><th>Case ID</th><th>Disease</th><th>Health Center</th><th>Date Validated</th><th>Day(s) Elapsed</th><th>Surveillance Status</th></tr>
+            </thead>
+            <tbody id="duration-table-body">
+              <tr><td colspan="6" class="text-center py-4 text-muted">Loading dashboard data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- VIEW 4: D2 NAVDPCP 2026 REPORT -->
+      <div id="view-navdpcp" class="view-container main-view-wrapper" style="display: none;">
+        <div class="p-3 text-center text-white fw-bold fs-4 rounded-3 mb-4" style="background-color: #438496;">D2 NAVDPCP 2026</div>
+        <div class="p-3 rounded-3 mb-4 d-flex flex-wrap gap-2 justify-content-center align-items-center" style="background-color: #438496;">
+          <select id="navdpcpBrgy" class="form-select form-select-sm" style="max-width: 180px;" onchange="onNavdpcpBrgyChanged()">
+            <option value="ALL BARANGAY">BARANGAY</option>
+            <option value="COMMONWEALTH">COMMONWEALTH</option>
+            <option value="BATASAN HILLS">BATASAN HILLS</option>
+            <option value="HOLY SPIRIT">HOLY SPIRIT</option>
+            <option value="PAYATAS">PAYATAS</option>
+            <option value="BAGONG SILANGAN">BAGONG SILANGAN</option>
+          </select>
+          <select id="navdpcpHC" class="form-select form-select-sm" style="max-width: 220px;" onchange="loadNavdpcpData()">
+            <option value="ALL HEALTH CENTERS">HEALTH CENTER DESIGNATION</option>
+          </select>
+          <div class="d-flex align-items-center gap-1 bg-white px-2 py-1 rounded-2 border">
+            <label class="small text-muted fw-bold me-1 mb-0" style="font-size: 10px;">START:</label>
+            <input type="date" id="navdpcpStartDate" class="form-control form-control-sm border-0 p-0" style="width: 110px; font-size: 11px;" value="2026-01-01" onchange="loadNavdpcpData()">
+            <label class="small text-muted fw-bold mx-1 mb-0" style="font-size: 10px;">END:</label>
+            <input type="date" id="navdpcpEndDate" class="form-control form-control-sm border-0 p-0" style="width: 110px; font-size: 11px;" value="2026-12-31" onchange="loadNavdpcpData()">
+          </div>
+          <select id="navdpcpRemarks" class="form-select form-select-sm" style="max-width: 200px;" onchange="loadNavdpcpData()">
+            <option value="ALL REMARKS">INVESTIGATION REMARKS</option>
+            <option value="DONE">DONE</option>
+            <option value="PENDING">PENDING</option>
+          </select>
+          <select id="navdpcpDisease" class="form-select form-select-sm" style="max-width: 180px;" onchange="loadNavdpcpData()">
+            <option value="DENGUE" selected>DENGUE</option>
+            <option value="ALL DISEASES">ALL DISEASES</option>
+          </select>
+        </div>
+
+        <div class="portal-card mb-4">
+          <h5 class="fw-bold text-uppercase mb-3">I. CASE FINDING AND MANAGEMENT</h5>
+          <div class="portal-table-wrapper">
+            <table class="portal-table">
+              <thead><tr><th>HEALTH CENTER DESIGNATION</th><th>SUSPECT</th><th>CONFIRM</th><th>null</th><th>PROBABLE</th><th>Grand total</th></tr></thead>
+              <tbody id="navdpcpTable1Body"><tr><td colspan="6" class="text-center py-3 text-muted">Loading report...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="portal-card mb-4">
+          <h5 class="fw-bold text-uppercase mb-3">2.1 Total No. of Dengue Cases Suspect tested using NS1 or Duo kits</h5>
+          <div class="portal-table-wrapper">
+            <table class="portal-table" id="navdpcpTable21">
+              <thead id="navdpcpTable21Head"><tr><th>HEALTH CENTER DESIGNATION</th><th>Loading...</th></tr></thead>
+              <tbody id="navdpcpTable21Body"><tr><td colspan="10" class="text-center py-3 text-muted">Loading testing data...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="portal-card mb-4">
+          <h5 class="fw-bold text-uppercase m-0">2.2 Total No. of Dengue Cases Suspect sent for confirmatory test</h5>
+          <div class="border border-2 border-dark px-5 py-2 fs-2 fw-bold bg-light" id="navdpcpKpi22">0</div>
+        </div>
+
+        <div class="portal-card mb-4">
+          <h5 class="fw-bold text-uppercase mb-3">3. Total No. of Confirmed Dengue Cases & 4. Total No. of Dengue Deaths</h5>
+          <div class="portal-table-wrapper">
+            <table class="portal-table">
+              <thead><tr><th>HEALTH CENTER DESIGNATION</th><th>CLINICAL_CLASSIFICATION</th><th>ALIVE</th><th>null</th><th>DIED</th><th>Grand total</th></tr></thead>
+              <tbody id="navdpcpTable34Body"><tr><td colspan="6" class="text-center py-3 text-muted">Loading outcomes...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="portal-card mb-4">
+          <h5 class="fw-bold text-uppercase mb-3">*4. Total No. of Dengue Cases followed-up/investigated by CESD</h5>
+          <div class="portal-table-wrapper">
+            <table class="portal-table">
+              <thead><tr><th>HEALTH CENTER DESIGNATION</th><th>PHSU ENDORSEMENT</th><th>HC DETECTED</th><th>Grand total</th></tr></thead>
+              <tbody id="navdpcpTable4StarBody"><tr><td colspan="4" class="text-center py-3 text-muted">Loading investigation sources...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 3: PATIENT PROFILE - COMPLETE UNABRIDGED REGISTRY FORM -->
+      <div id="view-masterdb" class="view-container main-view-wrapper" style="display: none;">
+        <div class="portal-card">
+          <form id="dataForm" novalidate>
+            <input type="hidden" id="rowIndex" value="">
+
+            <!-- 1. CASE ADMINISTRATION -->
+            <div class="portal-section-title">CASE ADMINISTRATION</div>
+            <div class="portal-form-grid">
+              <div class="portal-form-group">
+                <label for="HEALTH CENTER DESIGNATION">HEALTH CENTER DESIGNATION</label>
+                <select id="HEALTH CENTER DESIGNATION" name="HEALTH CENTER DESIGNATION">
+                  <option value="" disabled selected>-- Select Health Center --</option>
+                  <option value="BATASAN HILLS SUPER HEALTH CENTER">BATASAN HILLS SUPER HEALTH CENTER</option>
+                  <option value="BATASAN HILLS ANNEX HEALTH CENTER">BATASAN HILLS ANNEX HEALTH CENTER</option>
+                  <option value="BAGONG SILANGAN HEALTH CENTER">BAGONG SILANGAN HEALTH CENTER</option>
+                  <option value="HOLY SPIRIT HEALTH CENTER">HOLY SPIRIT HEALTH CENTER</option>
+                  <option value="VETERANS HEALTH CENTER">VETERANS HEALTH CENTER</option>
+                  <option value="BETTY-GO HEALTH CENTER">BETTY-GO HEALTH CENTER</option>
+                  <option value="COMMONWEALTH MAIN HEALTH CENTER">COMMONWEALTH MAIN HEALTH CENTER</option>
+                  <option value="DOÑA NICASIA HEALTH CENTER">DOÑA NICASIA HEALTH CENTER</option>
+                  <option value="NATIONAL GOVT HEALTH CENTER">NATIONAL GOVT HEALTH CENTER</option>
+                  <option value="PAYATAS SUPER HEALTH CENTER">PAYATAS SUPER HEALTH CENTER</option>
+                  <option value="PAYATAS A HEALTH CENTER">PAYATAS A HEALTH CENTER</option>
+                  <option value="PAYATAS B HEALTH CENTER">PAYATAS B HEALTH CENTER</option>
+                  <option value="LUPANG PANGAKO HEALTH CENTER">LUPANG PANGAKO HEALTH CENTER</option>
+                  <option value="REPUBLIC HEALTH CENTER">REPUBLIC HEALTH CENTER</option>
+                  <option value="DELIST/NON-RES">DELIST/NON-RES</option>
+                </select>
+              </div>
+              <div class="portal-form-group"><label>CATEGORY</label><input type="text" id="CATEGORY"></div>
+              <div class="portal-form-group"><label>DISEASE NAME *</label><input type="text" id="DISEASE_NAME" required></div>
+              <div class="portal-form-group"><label>CASE ID *</label><input type="text" id="CASE_ID" required></div>
+              <div class="portal-form-group"><label>CESU DATE ADDED</label><input type="date" id="CESU DATE ADDED"></div>
+              <div class="portal-form-group"><label>DATE INVESTIGATED</label><input type="date" id="DATE INVESTIGATED"></div>
+              <div class="portal-form-group">
+                <label for="NAME OF INVESTIGATOR">NAME OF INVESTIGATOR</label>
+                <select id="NAME OF INVESTIGATOR" name="NAME OF INVESTIGATOR">
+                  <option value="" disabled selected>-- Select Investigator --</option>
+                  <option value="ANGELICA CASTELO">ANGELICA CASTELO</option>
+                  <option value="CHRISTOPER ARCE">CHRISTOPER ARCE</option>
+                  <option value="DIANE MANSALAY">DIANE MANSALAY</option>
+                  <option value="GARY LUIS CRUZ">GARY LUIS CRUZ</option>
+                  <option value="GLORY JANE EÑERO">GLORY JANE EÑERO</option>
+                  <option value="JOAN LIBRIL">JOAN LIBRIL</option>
+                  <option value="MARICEL UDJAN">MARICEL UDJAN</option>
+                  <option value="MARIEL GAYOSO">MARIEL GAYOSO</option>
+                  <option value="MARY ANJONETTE DULAP">MARY ANJONETTE DULAP</option>
+                  <option value="NICOLAS REX DUMLAO">NICOLAS REX DUMLAO</option>
+                  <option value="RICHARD SAMUEL PERALTA">RICHARD SAMUEL PERALTA</option>
+                  <option value="MICHIKO DELA ROSA">MICHIKO DELA ROSA</option>
+                  <option value="MA. ELIZA ERAYA">MA. ELIZA ERAYA</option>
+                  <option value="BENGUA, KATRINA R.">BENGUA, KATRINA R.</option>
+                  <option value="JADIE, SHERRIE MAY A.">JADIE, SHERRIE MAY A.</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 2. PATIENT PROFILE -->
+            <div class="portal-section-title">PATIENT PROFILE</div>
+            <div class="portal-form-grid">
+              <div class="portal-form-group"><label>FULL NAME (LN, FN, MD) *</label><input type="text" id="FULL NAME (LN,FN,MD)" placeholder="Last, First, Middle" required></div>
+              <div class="portal-form-group">
+                <label>GENDER</label>
+                <select id="GENDER">
+                  <option value="">-- Select --</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+              <div class="portal-form-group"><label>BIRTH DATE</label><input type="date" id="BIRTH DATE"></div>
+              <div class="portal-form-group"><label>AGE IN YEARS</label><input type="number" id="AGE_IN_YEARS"></div>
+              <div class="portal-form-group"><label>AGE IN MONTHS</label><input type="number" id="AGE IN MONTHS"></div>
+              <div class="portal-form-group"><label>AGE GROUP</label><input type="text" id="AGE_GROUP"></div>
+              <div class="portal-form-group"><label>GUARDIAN NAME</label><input type="text" id="GUARDIAN NAME"></div>
+              <div class="portal-form-group"><label>CONTACT #</label><input type="text" id="CONTACT #"></div>
+              <div class="portal-form-group"><label>OCCUPATION</label><input type="text" id="OCCUPATION"></div>
+            </div>
+
+            <!-- 3. ADDRESS & MAPPING -->
+            <div class="portal-section-title">ADDRESS & MAPPING</div>
+            <div class="portal-form-grid">
+              <div class="portal-form-group"><label>BARANGAY *</label><input type="text" id="BARANGAY" required></div>
+              <div class="portal-form-group"><label>HOUSE # / BLK/LT</label><input type="text" id="HOUSE # / BLK/LT"></div>
+              <div class="portal-form-group"><label>STREET</label><input type="text" id="STREET"></div>
+              <div class="portal-form-group"><label>AREA LOCATION</label><input type="text" id="AREA LOCATION"></div>
+              <div class="portal-form-group"><label>COMPLETE ADDRESS</label><input type="text" id="COMPLETE ADDRESS"></div>
+              <div class="portal-form-group"><label>GEO_MAPPING (MAP COORDS)</label><input type="text" id="GEO_MAPPING (CORDINATES THRU G-MAPS)" placeholder="14.65, 121.03"></div>
+            </div>
+
+            <!-- 4. SCHOOL & INSTITUTION DETAILS -->
+            <div class="portal-section-title">SCHOOL & INSTITUTION DETAILS</div>
+            <div class="portal-form-grid">
+              <div class="portal-form-group"><label>FACILITY NAME</label><input type="text" id="FACILITY_NAME"></div>
+              <div class="portal-form-group"><label>NAME OF SCHOOL / WORKPLACE</label><input type="text" id="NAME OF SCHOOL / WORK PLACE"></div>
+              <div class="portal-form-group"><label>SCHOOL BARANGAY</label><input type="text" id="SCHOOL BARANGAY"></div>
+              <div class="portal-form-group"><label>GRADE LEVEL</label><input type="text" id="GRADE LEVEL"></div>
+              <div class="portal-form-group"><label>SECTION</label><input type="text" id="SECTION"></div>
+              <div class="portal-form-group">
+                <label>SCHOOL TYPE</label>
+                <select id="PRIVATE_OR_PUBLIC_OR_DELIST/NON-RES">
+                  <option value="">-- Select --</option>
+                  <option value="Private">Private</option>
+                  <option value="Public">Public</option>
+                  <option value="Delist/Non-Res">Delist/Non-Res</option>
+                </select>
+              </div>
+              <div class="portal-form-group"><label>NUMBER OF CHILDREN IN CLASS</label><input type="number" id="NUMBER OF CHILDREN IN CLASS"></div>
+              <div class="portal-form-group"><label>DATE OF LAST ATTENDANCE</label><input type="date" id="DATE OF LAST ATTENDANCE"></div>
+            </div>
+
+            <!-- 5. CLINICAL, EXPOSURE & TESTING -->
+            <div class="portal-section-title">CLINICAL, EXPOSURE & TESTING</div>
+            <div class="portal-form-grid">
+              <div class="portal-form-group"><label>DATE ONSET</label><input type="date" id="DATE ONSET"></div>
+              <div class="portal-form-group"><label>CASE CLASSIFICATION</label><input type="text" id="CASE_CLASSIFICATION"></div>
+              <div class="portal-form-group"><label>CLINICAL CLASSIFICATION</label><input type="text" id="CLINICAL_CLASSIFICATION"></div>
+              <div class="portal-form-group"><label>OUTCOME</label><input type="text" id="OUTCOME"></div>
+              <div class="portal-form-group"><label>DATE SPECIMEN COLLECTION</label><input type="date" id="DATE SPECIMEN COLLECTION"></div>
+              <div class="portal-form-group">
+                <label for="TYPE OF TESTING">TYPE OF TESTING</label>
+                <select id="TYPE OF TESTING" name="TYPE OF TESTING">
+                  <option value="" disabled selected>-- Select Type of Testing --</option>
+                  <option value="CEREBRAL SPINAL FLUID">CEREBRAL SPINAL FLUID</option>
+                  <option value="CSF">CSF</option>
+                  <option value="DELIST/NON-RES">DELIST/NON-RES</option>
+                  <option value="Duo (-)">Duo (-)</option>
+                  <option value="HBSAG (+)">HBSAG (+)</option>
+                  <option value="IgG (+)">IgG (+)</option>
+                  <option value="IgM (-)">IgM (-)</option>
+                  <option value="IgM (+)">IgM (+)</option>
+                  <option value="IgM Antibody Measles">IgM Antibody Measles</option>
+                  <option value="IgM, IgG (-)">IgM, IgG (-)</option>
+                  <option value="IgM, IgG (+)">IgM, IgG (+)</option>
+                  <option value="Lepto MAT">Lepto MAT</option>
+                  <option value="MEASLES IGM (-) RUBELLA (-)">MEASLES IGM (-) RUBELLA (-)</option>
+                  <option value="N/A">N/A</option>
+                  <option value="No Test">No Test</option>
+                  <option value="NPS/OPS">NPS/OPS</option>
+                  <option value="NS 1 (-)">NS 1 (-)</option>
+                  <option value="NS 1 (+)">NS 1 (+)</option>
+                  <option value="NS 1, IgM (+)">NS 1, IgM (+)</option>
+                  <option value="Ns 1, IgM, IgG (-)">Ns 1, IgM, IgG (-)</option>
+                  <option value="Ns 1, IgM, IgG (+)">Ns 1, IgM, IgG (+)</option>
+                  <option value="Ns 1(+), IgM, IgG">Ns 1(+), IgM, IgG</option>
+                  <option value="Ns 1, IgG (+)">Ns 1, IgG (+)</option>
+                  <option value="Polymerase Chain Reaction">Polymerase Chain Reaction</option>
+                  <option value="POLYMERASE CHAIN REACTION (-)">POLYMERASE CHAIN REACTION (-)</option>
+                  <option value="POLYMERASE CHAIN REACTION (+)">POLYMERASE CHAIN REACTION (+)</option>
+                  <option value="RAPID ANTIGEN TEST">RAPID ANTIGEN TEST</option>
+                  <option value="RAPID ANTIGEN TEST (-)">RAPID ANTIGEN TEST (-)</option>
+                  <option value="RAPID ANTIGEN TEST (+)">RAPID ANTIGEN TEST (+)</option>
+                  <option value="RAPID DIAGNOSTIC TEST (-)">RAPID DIAGNOSTIC TEST (-)</option>
+                  <option value="RAPID DIAGNOSTIC TEST (+)">RAPID DIAGNOSTIC TEST (+)</option>
+                  <option value="RECTAL SWAB">RECTAL SWAB</option>
+                  <option value="RTPCR">RTPCR</option>
+                  <option value="SERUM & OPS">SERUM & OPS</option>
+                  <option value="SERUM TESTING">SERUM TESTING</option>
+                  <option value="Stool">Stool</option>
+                  <option value="Throat swab">Throat swab</option>
+                  <option value="Typhidot Test">Typhidot Test</option>
+                  <option value="Typhoid test">Typhoid test</option>
+                </select>
+              </div>
+              <div class="portal-form-group"><label>LAB TEST RESULT</label><input type="text" id="LAB TEST RESULT"></div>
+              <div class="portal-form-group"><label>DATE OF EXPOSURE</label><input type="date" id="DATE_OF_EXPOSURE"></div>
+              <div class="portal-form-group"><label>PLACE OF EXPOSURE</label><input type="text" id="PLACE OF EXPOSURE"></div>
+              <div class="portal-form-group"><label>NATURE OF EXPOSURE</label><input type="text" id="NATURE OF EXPOSURE"></div>
+              <div class="portal-form-group"><label>RECEIVED VACCINE</label><input type="text" id="RECEIVED VACCINE"></div>
+              <div class="portal-form-group"><label>VACCINE DATE</label><input type="date" id="VACCINE DATE"></div>
+              <div class="portal-form-group"><label>MORBIDITY WEEK</label><input type="text" id="MORBIDITY_WEEK"></div>
+              <div class="portal-form-group"><label>MONTHS</label><input type="text" id="MONTHS"></div>
+            </div>
+
+            <!-- 6. OPERATIONAL NOTES & TRACKING -->
+            <div class="portal-section-title">OPERATIONAL NOTES & TRACKING</div>
+            <div class="portal-form-grid">
+              <div class="portal-form-group"><label>INVESTIGATION REMARKS</label><input type="text" id="INVESTIGATION REMARKS"></div>
+              
+              <!-- SMART CIF/CRF (GOOGLE DRIVE LINK) FIELD -->
+              <div class="portal-form-group" style="position: relative;">
+                <label for="CIF/CRF">CIF/CRF (GOOGLE DRIVE LINK)</label>
+                <div style="position: relative; display: flex; align-items: center;">
+                  <input type="text" id="CIF/CRF" name="CIF/CRF" placeholder="https://drive.google.com/file/d/..." onclick="handleCifFieldClick(this)" title="Click to upload PDS if empty, or download attached file." style="cursor: pointer; padding-right: 32px;">
+                  <i class="fa-solid fa-cloud-arrow-up" id="cifIcon" style="position: absolute; right: 10px; color: #4e79a7; pointer-events: none;"></i>
+                  <input type="file" id="pdsFileInput" style="display:none;" accept=".pdf,.pds,.doc,.docx,.jpg,.png,.json,.xlsx,.csv" onchange="handlePdsFileUpload(event)">
+                </div>
+              </div>
+
+              <div class="portal-form-group">
+                <label for="TOP DATA CONTROLLER WITH MULTIPLE CASE UPDATE">TOP DATA CONTROLLER (UPDATES)</label>
+                <select id="TOP DATA CONTROLLER WITH MULTIPLE CASE UPDATE" name="TOP DATA CONTROLLER WITH MULTIPLE CASE UPDATE">
+                  <option value="" disabled selected>-- Select Data Controller --</option>
+                  <option value="EDMARIE JOYCE VILLAR">EDMARIE JOYCE VILLAR</option>
+                  <option value="NORMAN SOLIBAN">NORMAN SOLIBAN</option>
+                  <option value="MARJORIE VELASCO">MARJORIE VELASCO</option>
+                  <option value="MARK ANTHONY HABER">MARK ANTHONY HABER</option>
+                  <option value="PAMELA DOLLENTAS">PAMELA DOLLENTAS</option>
+                  <option value="JOHN CEDRICK VELASCO">JOHN CEDRICK VELASCO</option>
+                  <option value="PRINCE AUSTINE RINO">PRINCE AUSTINE RINO</option>
+                  <option value="ARCHIE DOCTOR">ARCHIE DOCTOR</option>
+                  <option value="CHRIS PAJARA">CHRIS PAJARA</option>
+                  <option value="MARJORIE ANGKIG">MARJORIE ANGKIG</option>
+                  <option value="CATHY MECATE">CATHY MECATE</option>
+                  <option value="JEROME REDOBLADO">JEROME REDOBLADO</option>
+                  <option value="MARC JAMES MORALES">MARC JAMES MORALES</option>
+                  <option value="LLOYD CORPUZ">LLOYD CORPUZ</option>
+                  <option value="MARIENELL MONFORTE">MARIENELL MONFORTE</option>
+                  <option value="CUEBILLAS, LEOPOLDO JR">CUEBILLAS, LEOPOLDO JR</option>
+                  <option value="MARCAIDA, JAYANNE MAUREEN">MARCAIDA, JAYANNE MAUREEN</option>
+                </select>
+              </div>
+              <div class="portal-form-group"><label>ACTION TAKEN BY HEALTH CENTER</label><input type="text" id="ACTION TAKEN BY HEALTH CENTER"></div>
+              <div class="portal-form-group"><label>REMARKS</label><input type="text" id="REMARKS"></div>
+            </div>
+
+            <div class="portal-actions">
+              <button type="submit" id="submitBtn" class="btn-submit"><i class="fa-solid fa-floppy-disk me-1"></i> Save Entry</button>
+              <button type="button" class="btn-json" onclick="exportPatientProfileJson()"><i class="fa-solid fa-file-code me-1"></i> Download Patient JSON</button>
+              <button type="button" id="cancelBtn" class="btn-cancel">Cancel Edit</button>
+              <span id="statusMsg" class="small font-weight-bold ms-2"></span>
+            </div>
+          </form>
+        </div>
+
+        <div class="portal-card">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <h3 class="h5 font-weight-bold m-0">Patient Records</h3>
+            <div class="d-flex align-items-center gap-2">
+              <input type="text" id="masterSearchInput" class="form-control form-control-sm" placeholder="Search by name, ID, disease..." style="width: 240px;">
+              <span id="recordCount" class="badge bg-secondary">0 Records</span>
+            </div>
+          </div>
+          <div class="portal-table-wrapper">
+            <table class="portal-table">
+              <thead><tr id="tableHeaders"><th class="sticky-actions">ACTIONS</th></tr></thead>
+              <tbody id="tableBody"><tr><td colspan="50" class="text-center py-4 text-muted">Loading database...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let isAuthenticated = false;
+    let currentUser = null;
+
+    let datasetCache = [];
+    let thresholdBaselines = {}; 
+    let masterHealthCenters = [];
+    let allDurationCases = [];
+    let currentDurationCategory = 'All';
+
+    const HEADERS = [
+      "HEALTH CENTER DESIGNATION", "CATEGORY", "INVESTIGATION REMARKS", "DISEASE_NAME",
+      "CASE_ID", "FULL NAME (LN,FN,MD)", "GENDER", "BIRTH DATE", "AGE_IN_YEARS",
+      "BARANGAY", "HOUSE # / BLK/LT", "STREET", "AREA LOCATION", "COMPLETE ADDRESS",
+      "CONTACT #", "GUARDIAN NAME", "CESU DATE ADDED", "DATE INVESTIGATED",
+      "FACILITY_NAME", "NAME OF SCHOOL / WORK PLACE", "SCHOOL BARANGAY", "GRADE LEVEL",
+      "SECTION", "PRIVATE_OR_PUBLIC_OR_DELIST/NON-RES", "NUMBER OF CHILDREN IN CLASS", "DATE OF LAST ATTENDANCE",
+      "OCCUPATION", "OUTCOME", "CASE_CLASSIFICATION", "CLINICAL_CLASSIFICATION",
+      "DATE SPECIMEN COLLECTION", "DATE ONSET", "DATE_OF_EXPOSURE", "VACCINE DATE",
+      "RECEIVED VACCINE", "PLACE OF EXPOSURE", "NATURE OF EXPOSURE", "MORBIDITY_WEEK",
+      "MONTHS", "AGE_GROUP", "AGE IN MONTHS", "GEO_MAPPING (CORDINATES THRU G-MAPS)",
+      "TYPE OF TESTING", "NAME OF INVESTIGATOR", "TOP DATA CONTROLLER WITH MULTIPLE CASE UPDATE",
+      "CIF/CRF", "REMARKS", "ACTION TAKEN BY HEALTH CENTER", "LAB TEST RESULT"
+    ];
+    let cachedRecords = [];
+
+    let epiChartInstance = null;
+    let demogChartInstance = null;
+    let ageGroupChartInstance = null;
+    let mapInstance = null;
+    let markerLayerGroup = null;
+    let allDiseasesChartInstance = null;
+    let diseaseSharePieInstance = null;
+    let barangayDistributionChartInstance = null;
+    let caseClassificationChartInstance = null;
+
+    /* Custom In-Bar Data Labels Plugin for Chart.js */
+    const inBarDataLabelsPlugin = {
+      id: 'inBarDataLabels',
+      afterDatasetsDraw(chart) {
+        try {
+          if (!chart || !chart.canvas || chart.canvas.id === 'epiCurveCanvas' || chart.canvas.id === 'allDiseasesOverviewCanvas' || chart.canvas.id === 'diseaseSharePieCanvas') return;
+
+          const { ctx } = chart;
+          const isHorizontal = chart.config && chart.config.options && chart.config.options.indexAxis === 'y';
+          
+          chart.data.datasets.forEach((dataset, datasetIndex) => {
+            const meta = chart.getDatasetMeta(datasetIndex);
+            if (meta && !meta.hidden && meta.data) {
+              meta.data.forEach((element, index) => {
+                const rawVal = dataset.data[index];
+                if (rawVal !== undefined && rawVal !== null && rawVal !== 0) {
+                  const absVal = Math.abs(rawVal);
+                  ctx.save();
+                  ctx.fillStyle = '#ffffff';
+                  ctx.font = 'bold 13px system-ui, -apple-system, sans-serif';
+                  ctx.textBaseline = 'middle';
+
+                  if (isHorizontal) {
+                    const barWidth = Math.abs(element.x - element.base);
+                    if (rawVal < 0) {
+                      ctx.textAlign = barWidth > 35 ? 'left' : 'right';
+                      const posX = barWidth > 35 ? element.x + 8 : element.x - 8;
+                      if (barWidth <= 35) ctx.fillStyle = '#334155';
+                      ctx.fillText(absVal.toLocaleString(), posX, element.y);
+                    } else {
+                      ctx.textAlign = barWidth > 35 ? 'right' : 'left';
+                      const posX = barWidth > 35 ? element.x - 8 : element.x + 8;
+                      if (barWidth <= 35) ctx.fillStyle = '#334155';
+                      ctx.fillText(absVal.toLocaleString(), posX, element.y);
+                    }
+                  } else {
+                    ctx.textAlign = 'center';
+                    const barHeight = element.base - element.y;
+                    let posY = element.y + 14;
+                    if (barHeight < 28) {
+                      posY = element.y - 12;
+                      ctx.fillStyle = '#334155';
+                    }
+                    ctx.fillText(absVal.toLocaleString(), element.x, posY);
+                  }
+                  ctx.restore();
+                }
+              });
+            }
+          });
+        } catch (e) {
+          console.warn("inBarDataLabelsPlugin error:", e);
+        }
+      }
+    };
+    
+    if (typeof Chart !== 'undefined') {
+      Chart.register(inBarDataLabelsPlugin);
+    }
+
+    const healthCenterMap = {
+      "COMMONWEALTH": ["COMMONWEALTH MAIN HEALTH CENTER", "NATIONAL GOVT HEALTH CENTER", "DOÑA NICASIA HEALTH CENTER"],
+      "BATASAN HILLS": ["BATASAN HILLS SUPER HEALTH CENTER", "BATASAN HILLS ANNEX HEALTH CENTER"],
+      "HOLY SPIRIT": ["HOLY SPIRIT HEALTH CENTER", "VETERANS HEALTH CENTER", "BETTY-GO HEALTH CENTER"],
+      "PAYATAS": ["PAYATAS SUPER HEALTH CENTER", "PAYATAS A HEALTH CENTER", "PAYATAS B HEALTH CENTER", "LUPANG PANGAKO HEALTH CENTER"],
+      "BAGONG SILANGAN": ["BAGONG SILANGAN HEALTH CENTER"]
+    };
+
+    document.addEventListener("DOMContentLoaded", function() {
+      try {
+        initializeLeafletMap();
+        initMasterPortalHeaders();
+        initMasterPortalValidation();
+        updateAuthUI();
+      } catch (err) {
+        console.error("Initialization error:", err);
+      }
+    });
+
+    function showToast(msg) {
+      const toast = document.getElementById("globalToast");
+      const label = document.getElementById("globalToastMsg");
+      if (!toast || !label) return;
+      label.innerText = msg;
+      toast.style.display = "flex";
+      setTimeout(() => { toast.style.display = "none"; }, 3500);
+    }
+
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById("passwordInput");
+      const toggleIcon = document.getElementById("passwordToggleIcon");
+      if (passwordInput.type === "password") {
+        passwordInput.type = "text";
+        toggleIcon.classList.replace("fa-eye", "fa-eye-slash");
+      } else {
+        passwordInput.type = "password";
+        toggleIcon.classList.replace("fa-eye-slash", "fa-eye");
+      }
+    }
+
+    function switchTab(tabName, animationDirection = 'right') {
+      const protectedTabs = ['overview', 'duration', 'navdpcp', 'masterdb'];
+
+      if (protectedTabs.includes(tabName) && !isAuthenticated) {
+        showToast("Please log in to access the Surveillance System.");
+        switchTab('login', 'right');
+        return;
+      }
+
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      
+      const views = {
+        'home': document.getElementById('view-home'),
+        'login': document.getElementById('view-login'),
+        'overview': document.getElementById('view-overview'),
+        'duration': document.getElementById('view-duration'),
+        'navdpcp': document.getElementById('view-navdpcp'),
+        'masterdb': document.getElementById('view-masterdb')
+      };
+
+      const sidebar = document.getElementById('sidebarPanel');
+
+      Object.keys(views).forEach(k => {
+        if (views[k]) {
+          views[k].style.display = 'none';
+          views[k].classList.remove('slide-from-right', 'slide-from-left');
+        }
+      });
+
+      const activeView = views[tabName];
+      const animClass = animationDirection === 'left' ? 'slide-from-left' : 'slide-from-right';
+
+      if (tabName === 'home') {
+        const tabEl = document.getElementById('tab-home');
+        if (tabEl) tabEl.classList.add('active');
+        if (sidebar) sidebar.classList.add('slide-out');
+        if (activeView) { activeView.style.display = 'block'; activeView.classList.add(animClass); }
+      } else if (tabName === 'login') {
+        const tabLogin = document.getElementById('tab-login');
+        if (tabLogin) tabLogin.classList.add('active');
+        if (sidebar) sidebar.classList.add('slide-out');
+        if (activeView) { activeView.style.display = 'block'; activeView.classList.add(animClass); }
+      } else if (tabName === 'duration') {
+        const tabEl = document.getElementById('tab-duration');
+        if (tabEl) tabEl.classList.add('active');
+        if (sidebar) sidebar.classList.add('slide-out');
+        if (activeView) { activeView.style.display = 'block'; activeView.classList.add(animClass); }
+        loadCaseDurationData();
+      } else if (tabName === 'navdpcp') {
+        const tabEl = document.getElementById('tab-navdpcp');
+        if (tabEl) tabEl.classList.add('active');
+        if (sidebar) sidebar.classList.add('slide-out');
+        if (activeView) { activeView.style.display = 'block'; activeView.classList.add(animClass); }
+        loadNavdpcpData();
+      } else if (tabName === 'masterdb') {
+        const tabEl = document.getElementById('tab-masterdb');
+        if (tabEl) tabEl.classList.add('active');
+        if (sidebar) sidebar.classList.add('slide-out');
+        if (activeView) { activeView.style.display = 'block'; activeView.classList.add(animClass); }
+        loadMasterRecords();
+      } else {
+        const tabEl = document.getElementById('tab-overview');
+        if (tabEl) tabEl.classList.add('active');
+        if (sidebar) sidebar.classList.remove('slide-out');
+        if (activeView) { activeView.style.display = 'block'; activeView.classList.add(animClass); }
+        
+        setTimeout(() => { 
+          try { 
+            if (mapInstance) {
+              mapInstance.invalidateSize(); 
+            } else {
+              initializeLeafletMap();
+            }
+          } catch(e){} 
+        }, 200);
+      }
+    }
+
+    function handleLoginNavClick() {
+      if (isAuthenticated) {
+        handleLogout();
+      } else {
+        switchTab('login', 'right');
+      }
+    }
+
+    function handleLogin(event) {
+      event.preventDefault();
+      const statusElem = document.getElementById('status-message');
+      const submitBtn = document.getElementById('submitLoginBtn');
+
+      statusElem.style.color = 'var(--accent-blue)';
+      statusElem.innerText = 'AUTHENTICATING CREDENTIALS...';
+      submitBtn.disabled = true;
+
+      const formData = {
+        username: document.getElementById('usernameInput').value.trim(),
+        password: document.getElementById('passwordInput').value.trim()
+      };
+
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.processLogin) {
+        google.script.run
+          .withSuccessHandler(function(response) {
+            submitBtn.disabled = false;
+            if (response && response.success) {
+              setLoginSuccess(formData.username);
+            } else {
+              statusElem.style.color = 'var(--error)';
+              statusElem.innerText = response ? response.message : 'Invalid credentials. Please try again.';
+            }
+          })
+          .withFailureHandler(function(err) {
+            submitBtn.disabled = false;
+            statusElem.style.color = 'var(--error)';
+            statusElem.innerText = 'SYSTEM_ERR: ' + (err ? err.message : 'Login failed.');
+          })
+          .processLogin(formData);
+      } else {
+        setTimeout(function() {
+          submitBtn.disabled = false;
+          if (formData.username && formData.password) {
+            setLoginSuccess(formData.username);
+          } else {
+            statusElem.style.color = 'var(--error)';
+            statusElem.innerText = 'Please provide valid credentials.';
+          }
+        }, 400);
+      }
+    }
+
+    function setLoginSuccess(username) {
+      isAuthenticated = true;
+      currentUser = username;
+      updateAuthUI();
+
+      document.getElementById('usernameInput').value = '';
+      document.getElementById('passwordInput').value = '';
+      document.getElementById('status-message').innerText = '';
+
+      showToast(`Welcome back, ${username}!`);
+      loadDataServer();
+      loadCaseDurationData();
+
+      setTimeout(function() {
+        switchTab('overview', 'left');
+      }, 250);
+    }
+
+    function handleLogout() {
+      isAuthenticated = false;
+      currentUser = null;
+      updateAuthUI();
+      showToast("You have been signed out.");
+      switchTab('home', 'left');
+    }
+
+    function updateAuthUI() {
+      const protectedNavs = document.querySelectorAll('.nav-item.protected-nav');
+      const loginNavText = document.getElementById('navLoginText');
+      const navLoginIcon = document.getElementById('navLoginIcon');
+      const tabLogin = document.getElementById('tab-login');
+
+      if (isAuthenticated) {
+        protectedNavs.forEach((nav, index) => {
+          setTimeout(() => { nav.classList.add('revealed'); }, index * 50);
+        });
+
+        if (loginNavText) loginNavText.innerText = `LOGOUT (${currentUser || 'USER'})`;
+        if (navLoginIcon) navLoginIcon.className = "fa-solid fa-arrow-right-from-bracket me-2";
+        if (tabLogin) {
+          tabLogin.classList.remove('nav-item-login');
+          tabLogin.classList.add('nav-item-logout');
+        }
+      } else {
+        protectedNavs.forEach((nav) => { nav.classList.remove('revealed'); });
+        if (loginNavText) loginNavText.innerText = 'LOGIN';
+        if (navLoginIcon) navLoginIcon.className = "fa-solid fa-arrow-right-to-bracket me-2";
+        if (tabLogin) {
+          tabLogin.classList.remove('nav-item-logout');
+          tabLogin.classList.add('nav-item-login');
+        }
+      }
+    }
+
+    function refreshPortalData() {
+      if (!isAuthenticated) {
+        showToast("Please log in first to load surveillance datasets.");
+        switchTab('login', 'right');
+        return;
+      }
+      loadDataServer();
+      loadCaseDurationData();
+      loadNavdpcpData();
+      loadMasterRecords();
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute("data-theme");
+      const newTheme = currentTheme === "dark" ? "light" : "dark";
+      html.setAttribute("data-theme", newTheme);
+
+      const themeBtn = document.getElementById("themeBtn");
+      if (themeBtn) {
+        themeBtn.innerHTML = newTheme === "dark" 
+          ? `<i class="fa-solid fa-sun"></i> <span>Light</span>`
+          : `<i class="fa-solid fa-moon"></i> <span>Dark</span>`;
+      }
+    }
+
+    /* INITIALIZE LEAFLET MAP (PROBABLE REMOVED FROM LEGEND) */
+    function initializeLeafletMap() {
+      try {
+        const mapEl = document.getElementById('mapContainer');
+        if (!mapEl) return;
+        if (mapInstance) {
+          mapInstance.invalidateSize();
+          return;
+        }
+
+        mapInstance = L.map('mapContainer', {
+          preferCanvas: true
+        }).setView([14.6850, 121.0920], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(mapInstance);
+
+        markerLayerGroup = L.layerGroup().addTo(mapInstance);
+
+        // Legend with Probable removed
+        const legendControl = L.control({ position: 'bottomright' });
+        legendControl.onAdd = function() {
+          let div = L.DomUtil.create('div', 'map-legend-overlay');
+          div.innerHTML = `
+            <strong>Clusters Legend</strong><br>
+            <span class="legend-bullet" style="background:#e15759;"></span>Confirmed (Red)<br>
+            <span class="legend-bullet" style="background:#4e79a7;"></span>Suspect (Blue)<br>
+            <span class="legend-bullet" style="background:#10b981;"></span>Negative (Green)
+          `;
+          return div;
+        };
+        legendControl.addTo(mapInstance);
+      } catch(e) {
+        console.warn("Leaflet map initialization skipped/deferred:", e);
+      }
+    }
+
+    /* PLOT GEOSPATIAL MARKERS (PROBABLE FILTERED OUT AND REMOVED) */
+    function plotGeospatialMarkers(subset, targetDisease) {
+      try {
+        if (!mapInstance) {
+          initializeLeafletMap();
+        }
+        if (!mapInstance || !markerLayerGroup) return;
+
+        markerLayerGroup.clearLayers();
+        const diseaseLabel = targetDisease === "ALL DISEASES" ? "District 2 Health Trends" : targetDisease;
+        const titleElem = document.getElementById("mapDynamicTitle");
+        if (titleElem) {
+          titleElem.innerText = `${diseaseLabel} Geospatial Clusters Spot Map (200m Spatial Buffers)`;
+        }
+
+        let validPoints = [];
+
+        subset.forEach(item => {
+          if (item.lat !== null && item.lng !== null && !isNaN(item.lat) && !isNaN(item.lng)) {
+            let cls = String(item.classification || '').toUpperCase();
+            
+            // PROBABLE REMOVED FROM SPOT MAP PLOTTING
+            if (cls.includes('PROBABLE')) {
+              return;
+            }
+
+            let color = '#4e79a7'; // Blue for Suspect
+            if (cls.includes('CONFIRM') || cls.includes('POS')) color = '#e15759'; // Red for Confirmed
+            else if (cls.includes('NEGATIVE')) color = '#10b981'; // Green for Negative
+
+            const circle = L.circle([item.lat, item.lng], {
+              radius: 200,
+              fillColor: color,
+              color: '#1e293b',
+              weight: 1.2,
+              opacity: 0.85,
+              fillOpacity: 0.4
+            });
+
+            const popupContent = `
+              <div style="font-size:12px; line-height:1.5;">
+                <strong style="color:${color}; font-size:13px;">${item.diseaseName || 'Disease Case Log'}</strong><br>
+                <b>Status:</b> ${item.classification || 'Suspect'}<br>
+                <b>Barangay:</b> ${item.barangay || 'N/A'}<br>
+                <b>Health Center:</b> ${item.healthCenter || 'N/A'}<br>
+                <b>Age / Sex:</b> ${item.age !== null ? item.age + ' y.o.' : 'N/A'} / ${item.sex || 'N/A'}
+              </div>
+            `;
+            circle.bindPopup(popupContent);
+            markerLayerGroup.addLayer(circle);
+            validPoints.push([item.lat, item.lng]);
+          }
+        });
+
+        setTimeout(() => {
+          if (mapInstance) {
+            mapInstance.invalidateSize();
+            if (validPoints.length > 0) {
+              const bounds = L.latLngBounds(validPoints);
+              mapInstance.fitBounds(bounds, { padding: [35, 35], maxZoom: 16 });
+            } else {
+              mapInstance.setView([14.6850, 121.0920], 13);
+            }
+          }
+        }, 150);
+      } catch (err) {
+        console.error("Error in plotGeospatialMarkers:", err);
+      }
+    }
+
+    function loadDataServer() {
+      if (!isAuthenticated) return;
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.getMetricsData) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (!res) return;
+            datasetCache = res.data || [];
+            thresholdBaselines = res.baselines || {}; 
+            masterHealthCenters = res.dropdowns ? res.dropdowns.healthCenters : [];
+            
+            buildSelectorFromMap("selCenter", ["ALL HEALTH CENTERS"].concat(masterHealthCenters));
+            populateNavdpcpHealthCenters(masterHealthCenters);
+            
+            let diseaseSet = new Set();
+            (res.data || []).forEach(function(item) {
+              if (item.diseaseName) diseaseSet.add(String(item.diseaseName).trim().toUpperCase());
+            });
+            buildSelectorFromDefaultOptions("selDisease", Array.from(diseaseSet).sort(), "All Diseases");
+            
+            const syncEl = document.getElementById("syncTimestamp");
+            if (syncEl && res.syncTime) syncEl.innerHTML = `<i class="fa-solid fa-circle"></i> Synced ` + res.syncTime;
+            runFilterPipeline();
+          })
+          .getMetricsData();
+      }
+    }
+
+    function loadCaseDurationData() {
+      if (!isAuthenticated) return;
+      const tbody = document.getElementById('duration-table-body');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading dashboard data...</td></tr>';
+
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.getDashboardData) {
+        google.script.run
+          .withSuccessHandler(renderDurationDashboard)
+          .getDashboardData();
+      }
+    }
+
+    function renderDurationDashboard(data) {
+      if (!data || !data.cases) return;
+      allDurationCases = data.cases.sort((a, b) => new Date(b.dateValidated) - new Date(a.dateValidated));
+      populateDurationHealthCenterFilter();
+      updateDurationDashboard();
+    }
+
+    function populateDurationHealthCenterFilter() {
+      const hcSelect = document.getElementById('durationHealthCenterFilter');
+      if (!hcSelect) return;
+      hcSelect.innerHTML = '<option value="All">All Health Centers</option>';
+      const healthCenters = [...new Set(allDurationCases.map(c => c.healthCenter).filter(Boolean))].sort();
+      healthCenters.forEach(hc => {
+        const option = document.createElement('option');
+        option.value = hc; option.textContent = hc;
+        hcSelect.appendChild(option);
+      });
+    }
+
+    function filterDurationCategory(category) {
+      currentDurationCategory = category;
+      const filterEl = document.getElementById('durationCategoryFilter');
+      if (filterEl) filterEl.value = category;
+      updateDurationDashboard();
+    }
+
+    function updateDurationDashboard() {
+      const searchEl = document.getElementById('durationSearchInput');
+      const searchTerm = searchEl ? searchEl.value.toLowerCase() : '';
+      const hcFilterEl = document.getElementById('durationHealthCenterFilter');
+      const selectedHC = hcFilterEl ? hcFilterEl.value : 'All';
+
+      const scopedCases = allDurationCases.filter(c => {
+        const matchesHC = (selectedHC === 'All' || c.healthCenter === selectedHC);
+        const matchesSearch = c.caseId.toString().toLowerCase().includes(searchTerm) || 
+                              c.disease.toLowerCase().includes(searchTerm) ||
+                              c.healthCenter.toLowerCase().includes(searchTerm);
+        return matchesHC && matchesSearch;
+      });
+
+      const elTotal = document.getElementById('count-total');
+      const elU24 = document.getElementById('count-under24');
+      const el2448 = document.getElementById('count-24-48');
+      const elO48 = document.getElementById('count-over48');
+
+      if (elTotal) elTotal.innerText = scopedCases.length;
+      if (elU24) elU24.innerText = scopedCases.filter(c => c.category === 'Under 24 Hours').length;
+      if (el2448) el2448.innerText = scopedCases.filter(c => c.category === '24 to 48 Hours').length;
+      if (elO48) elO48.innerText = scopedCases.filter(c => c.category === 'Over 48 Hours').length;
+
+      const tableCases = scopedCases.filter(c => currentDurationCategory === 'All' || c.category === currentDurationCategory);
+      renderDurationTable(tableCases);
+    }
+
+    function renderDurationTable(casesToRender) {
+      const tbody = document.getElementById('duration-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      if (casesToRender.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No matching records found.</td></tr>';
+        return;
+      }
+      casesToRender.forEach(c => {
+        let badgeClass = 'badge-under24';
+        if (c.category === '24 to 48 Hours') badgeClass = 'badge-2448';
+        if (c.category === 'Over 48 Hours') badgeClass = 'badge-over48';
+        const daysElapsed = (parseFloat(c.hoursElapsed) / 24).toFixed(1);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><strong>${c.caseId}</strong></td>
+          <td>${c.disease}</td>
+          <td>${c.healthCenter}</td>
+          <td>${c.dateValidated}</td>
+          <td><strong>${daysElapsed} days</strong></td>
+          <td><span class="status-badge ${badgeClass}">${c.category}</span></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function populateNavdpcpHealthCenters(centerList) {
+      const hcSelect = document.getElementById("navdpcpHC");
+      if (!hcSelect) return;
+      const currentVal = hcSelect.value;
+      hcSelect.innerHTML = '<option value="ALL HEALTH CENTERS">HEALTH CENTER DESIGNATION</option>';
+      const uniqueList = Array.from(new Set(centerList)).sort();
+      uniqueList.forEach(hc => {
+        if (hc && hc !== "ALL HEALTH CENTERS") {
+          const opt = document.createElement("option");
+          opt.value = hc; opt.textContent = hc;
+          hcSelect.appendChild(opt);
+        }
+      });
+      if (uniqueList.includes(currentVal)) hcSelect.value = currentVal;
+    }
+
+    function onNavdpcpBrgyChanged() {
+      const brgyEl = document.getElementById("navdpcpBrgy");
+      const selectedBrgy = brgyEl ? brgyEl.value.toUpperCase().trim() : "ALL BARANGAY";
+      const mappedCenters = (selectedBrgy === "ALL BARANGAY") ? masterHealthCenters : (healthCenterMap[selectedBrgy] || masterHealthCenters);
+      populateNavdpcpHealthCenters(mappedCenters);
+      loadNavdpcpData();
+    }
+
+    function loadNavdpcpData() {
+      if (!isAuthenticated) return;
+      const t1 = document.getElementById("navdpcpTable1Body");
+      if (t1) t1.innerHTML = '<tr><td colspan="6" class="text-center py-3 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading report...</td></tr>';
+
+      const filters = {
+        barangay: document.getElementById("navdpcpBrgy") ? document.getElementById("navdpcpBrgy").value : "ALL BARANGAY",
+        healthCenter: document.getElementById("navdpcpHC") ? document.getElementById("navdpcpHC").value : "ALL HEALTH CENTERS",
+        startDate: document.getElementById("navdpcpStartDate") ? document.getElementById("navdpcpStartDate").value : "",
+        endDate: document.getElementById("navdpcpEndDate") ? document.getElementById("navdpcpEndDate").value : "",
+        remarks: document.getElementById("navdpcpRemarks") ? document.getElementById("navdpcpRemarks").value : "ALL REMARKS",
+        disease: document.getElementById("navdpcpDisease") ? document.getElementById("navdpcpDisease").value : "DENGUE"
+      };
+
+      if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.getNavdpcpData) {
+        google.script.run
+          .withSuccessHandler(renderNavdpcpReport)
+          .getNavdpcpData(filters);
+      }
+    }
+
+    function renderNavdpcpReport(data) {
+      if (!data) return;
+      let t1Html = "";
+      const t1Body = document.getElementById("navdpcpTable1Body");
+      if (!t1Body) return;
+      if (data.table1 && data.table1.rows && data.table1.rows.length > 0) {
+        data.table1.rows.forEach(r => {
+          t1Html += `<tr><td><strong>${r.hc}</strong></td><td>${r.suspect}</td><td>${r.confirm}</td><td>${r.nullVal}</td><td>${r.probable}</td><td><strong>${r.grandTotal}</strong></td></tr>`;
+        });
+        t1Html += `<tr class="fw-bold bg-light"><td>Grand total</td><td>${data.table1.totals.SUSPECT}</td><td>${data.table1.totals.CONFIRM}</td><td>${data.table1.totals.null}</td><td>${data.table1.totals.PROBABLE}</td><td>${data.table1.totals.grandTotal}</td></tr>`;
+      } else {
+        t1Html = '<tr><td colspan="6" class="text-center py-3 text-muted">No records found.</td></tr>';
+      }
+      t1Body.innerHTML = t1Html;
+    }
+
+    /* DEMOGRAPHIC PYRAMID CALCULATOR HELPER */
+    function getDemographicPyramidData(records) {
+      const ageGroups = ["51+ y.o.", "41-50 y.o.", "31-40 y.o.", "21-30 y.o.", "11-20 y.o.", "1-10 y.o.", "<1 y.o."];
+      const maleCounts = new Array(ageGroups.length).fill(0);
+      const femaleCounts = new Array(ageGroups.length).fill(0);
+
+      records.forEach(function(item) {
+        let idx = -1;
+        if (item.age !== null && !isNaN(item.age)) {
+          let age = parseFloat(item.age);
+          if (age < 1) idx = 6;
+          else if (age <= 10) idx = 5;
+          else if (age <= 20) idx = 4;
+          else if (age <= 30) idx = 3;
+          else if (age <= 40) idx = 2;
+          else if (age <= 50) idx = 1;
+          else if (age > 50) idx = 0;
+        } else if (item.ageGroup) {
+          let grp = String(item.ageGroup).toUpperCase();
+          if (grp.includes("<1") || grp.includes("0-1") || grp.includes("BABY")) idx = 6;
+          else if (grp.includes("1-10") || grp.includes("2-10") || grp.includes("CHILD")) idx = 5;
+          else if (grp.includes("11-20")) idx = 4;
+          else if (grp.includes("21-30")) idx = 3;
+          else if (grp.includes("31-40")) idx = 2;
+          else if (grp.includes("41-50")) idx = 1;
+          else if (grp.includes("51+") || grp.includes("SENIOR") || grp.includes("61-") || grp.includes("71-") || grp.includes("81-")) idx = 0;
+        }
+
+        if (idx !== -1) {
+          if (item.sex === "MALE") maleCounts[idx]++;
+          else if (item.sex === "FEMALE") femaleCounts[idx]++;
+        }
+      });
+
+      return { labels: ageGroups, male: maleCounts, female: femaleCounts };
+    }
+
+    /* 1. EPIDEMIC & ALERT THRESHOLDS CHART */
+    function generateDynamicEpiCurve(filteredRecords, currentDiseaseName) {
+      const cleanDiseaseKey = currentDiseaseName.toUpperCase().trim();
+      const diseaseLabel = currentDiseaseName === "ALL DISEASES" ? "All Combined Diseases" : currentDiseaseName;
+      
+      const titleElem = document.getElementById("chartDynamicTitle");
+      if (titleElem) {
+        titleElem.innerText = `EPIDEMIC TRESHOLD, ALERT TRESHOLD and Current Yr-2026 - ${diseaseLabel}`;
+      }
+
+      const weekCounts = new Array(53).fill(0);
+      filteredRecords.forEach(item => {
+        let wNum = item.morbWeek;
+        if (wNum !== null && !isNaN(wNum)) {
+          if (wNum === -1) weekCounts[0]++;
+          else if (wNum >= 1 && wNum <= 52) weekCounts[wNum]++;
+        }
+      });
+
+      let epidemicThresholdLine = new Array(53).fill(0);
+      let alertThresholdLine = new Array(53).fill(0);
+      let hasNegOneBaseline = false;
+
+      if (thresholdBaselines && thresholdBaselines[cleanDiseaseKey]) {
+        const base = thresholdBaselines[cleanDiseaseKey];
+        if (base.epidemic) epidemicThresholdLine = base.epidemic;
+        if (base.alert) alertThresholdLine = base.alert;
+        hasNegOneBaseline = base.hasNegOne;
+      } else if (thresholdBaselines && thresholdBaselines["DENGUE"]) {
+        const base = thresholdBaselines["DENGUE"];
+        if (base.epidemic) epidemicThresholdLine = base.epidemic;
+        if (base.alert) alertThresholdLine = base.alert;
+        hasNegOneBaseline = base.hasNegOne;
+      }
+
+      let includeNegOne = hasNegOneBaseline || weekCounts[0] > 0;
+      let weekLabels = [];
+      let finalWeekCounts = [];
+      let finalEpidemicLine = [];
+      let finalAlertLine = [];
+
+      if (includeNegOne) {
+        weekLabels = ["-1"].concat(Array.from({length: 52}, (_, i) => String(i + 1)));
+        finalWeekCounts = weekCounts;
+        finalEpidemicLine = epidemicThresholdLine;
+        finalAlertLine = alertThresholdLine;
+      } else {
+        weekLabels = Array.from({length: 52}, (_, i) => String(i + 1));
+        finalWeekCounts = weekCounts.slice(1);
+        finalEpidemicLine = epidemicThresholdLine.slice(1);
+        finalAlertLine = alertThresholdLine.slice(1);
+      }
+
+      if (epiChartInstance !== null) { epiChartInstance.destroy(); }
+      const canvas = document.getElementById('epiCurveCanvas');
+      if (!canvas) return;
+
+      epiChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: weekLabels,
+          datasets: [
+            {
+              label: 'Current Yr 2026',
+              data: finalWeekCounts,
+              backgroundColor: '#1f4e79',
+              borderRadius: 3,
+              order: 3,
+              barPercentage: 0.8
+            },
+            {
+              label: 'EPIDEMIC TRESHOLD',
+              data: finalEpidemicLine,
+              type: 'line',
+              borderColor: '#990000',
+              borderWidth: 2.5,
+              pointRadius: 0,
+              fill: false,
+              tension: 0.35,
+              order: 1
+            },
+            {
+              label: 'ALERT TRESHOLD',
+              data: finalAlertLine,
+              type: 'line',
+              borderColor: '#4285f4',
+              borderWidth: 2,
+              borderDash: [3, 3],
+              pointRadius: 0,
+              fill: false,
+              tension: 0.35,
+              order: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              align: 'center',
+              labels: {
+                boxWidth: 15,
+                usePointStyle: false,
+                font: { size: 12, weight: 'bold' },
+                color: '#334155'
+              }
+            },
+            tooltip: { enabled: true }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              border: { display: true, color: '#000000' },
+              title: {
+                display: true,
+                text: 'Morbidity Week',
+                font: { size: 12, weight: 'bold' },
+                color: '#334155'
+              },
+              ticks: {
+                font: { size: 10, weight: '600' },
+                color: '#334155',
+                maxRotation: 0,
+                autoSkip: false
+              }
+            },
+            y: {
+              display: true,
+              beginAtZero: true,
+              grid: { display: true, color: '#f1f5f9' },
+              border: { display: false },
+              ticks: { font: { size: 11, weight: '700' }, color: '#334155' }
+            }
+          }
+        }
+      });
+    }
+
+    /* 2. DEMOGRAPHIC PYRAMID */
+    function generateDemographicPyramid(subset, targetDisease) {
+      const data = getDemographicPyramidData(subset);
+      if (demogChartInstance !== null) { demogChartInstance.destroy(); }
+      const canvas = document.getElementById('demogPyramidCanvas');
+      if (!canvas) return;
+
+      demogChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [
+            { label: 'Male', data: data.male.map(v => -v), backgroundColor: '#4e79a7', borderRadius: 4, barPercentage: 0.7 },
+            { label: 'Female', data: data.female, backgroundColor: '#e15759', borderRadius: 4, barPercentage: 0.7 }
+          ]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { display: false },
+            tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + Math.abs(c.raw) } }
+          },
+          scales: {
+            x: { stacked: true, display: false, grid: { display: false } },
+            y: { stacked: true, grid: { display: false }, border: { display: false }, ticks: { font: { size: 11, weight: '700' }, color: '#334155' } }
+          }
+        }
+      });
+    }
+
+    /* 3. AGE GROUP ANALYSIS OF THE CASES */
+    function generateAgeGroupAnalysisChart(subset) {
+      const data = getDemographicPyramidData(subset);
+      if (ageGroupChartInstance !== null) { ageGroupChartInstance.destroy(); }
+      const canvas = document.getElementById('ageGroupAnalysisCanvas');
+      if (!canvas) return;
+
+      ageGroupChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [
+            { label: 'MALE', data: data.male.map(v => -v), backgroundColor: '#4e79a7', borderRadius: 4, barPercentage: 0.7 },
+            { label: 'FEMALE', data: data.female, backgroundColor: '#e15759', borderRadius: 4, barPercentage: 0.7 }
+          ]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { display: false },
+            tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + Math.abs(c.raw) } }
+          },
+          scales: {
+            x: { stacked: true, display: false, grid: { display: false } },
+            y: { stacked: true, grid: { display: false }, border: { display: false }, ticks: { font: { size: 11, weight: '700' }, color: '#334155' } }
+          }
+        }
+      });
+    }
+
+    /* 4. TOTAL CASES DISTRIBUTION PER BARANGAY */
+    function generateBarangayDistributionChart(filteredRecords, targetBarangay) {
+      const section = document.getElementById('barangayDistributionCol');
+      if (targetBarangay !== "ALL BARANGAY") { 
+        if (section) section.style.display = 'none'; 
+        return; 
+      }
+      if (section) section.style.display = '';
+
+      const barangayCounts = {};
+      datasetCache.forEach(function(item) {
+        const brgy = String(item.barangay || "").trim();
+        if (brgy) barangayCounts[brgy] = (barangayCounts[brgy] || 0) + 1;
+      });
+
+      const entries = Object.entries(barangayCounts).sort((a, b) => b[1] - a[1]);
+      if (barangayDistributionChartInstance !== null) { barangayDistributionChartInstance.destroy(); }
+      const canvas = document.getElementById('barangayDistributionCanvas');
+      if (!canvas) return;
+
+      const gradientShades = ['#3d6d84', '#518096', '#719cac', '#9bbecb', '#c5e0ea'];
+      const barColors = entries.map((_, idx) => gradientShades[idx % gradientShades.length]);
+
+      barangayDistributionChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: entries.map(e => e[0]),
+          datasets: [{ 
+            data: entries.map(e => e[1]), 
+            backgroundColor: barColors, 
+            borderRadius: 4,
+            barPercentage: 0.7
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, border: { display: true, color: '#cbd5e1' }, ticks: { font: { size: 11, weight: '700' }, color: '#334155' } },
+            y: { display: false, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    /* 5. CASE CLASSIFICATION */
+    function generateCaseClassificationChart(filteredRecords) {
+      const counts = { "SUSPECT": 0, "PROBABLE": 0, "CONFIRM": 0 };
+      filteredRecords.forEach(function(item) {
+        const cls = String(item.classification || "").toUpperCase().trim();
+        if (cls.includes("SUSPECT")) counts["SUSPECT"]++;
+        else if (cls.includes("PROBABLE")) counts["PROBABLE"]++;
+        else if (cls.includes("CONFIRM") || cls.includes("POS")) counts["CONFIRM"]++;
+      });
+
+      if (caseClassificationChartInstance !== null) { caseClassificationChartInstance.destroy(); }
+      const canvas = document.getElementById('caseClassificationCanvas');
+      if (!canvas) return;
+
+      const gradientShades = ['#3d6d84', '#9bbecb', '#c5e0ea'];
+
+      caseClassificationChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: ['SUSPECT', 'PROBABLE', 'CONFIRM'],
+          datasets: [{ 
+            data: [counts["SUSPECT"], counts["PROBABLE"], counts["CONFIRMED"] || counts["CONFIRM"]], 
+            backgroundColor: gradientShades, 
+            borderRadius: 4,
+            barPercentage: 0.7
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, border: { display: true, color: '#cbd5e1' }, ticks: { font: { size: 11, weight: '700' }, color: '#334155' } },
+            y: { display: false, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function generateAllDiseasesBreakdownChart(subsetRecords) {
+      const sourceCounts = { "PHSU ENDORSEMENT": 0, "HC DETECTED": 0 };
+      const diseaseCounts = {};
+      subsetRecords.forEach(function(item) {
+        let cat = String(item.category || "").toUpperCase().trim();
+        if (cat === "PHSU ENDORSEMENT") sourceCounts["PHSU ENDORSEMENT"]++;
+        else sourceCounts["HC DETECTED"]++;
+        let disease = String(item.diseaseName || "UNSPECIFIED").trim();
+        diseaseCounts[disease] = (diseaseCounts[disease] || 0) + 1;
+      });
+
+      renderVerticalChart(sourceCounts);
+      renderPieChart(diseaseCounts);
+    }
+
+    function renderVerticalChart(chartData) {
+      const canvasHook = document.getElementById('allDiseasesOverviewCanvas');
+      if (!canvasHook) return;
+      if (allDiseasesChartInstance !== null) { allDiseasesChartInstance.destroy(); }
+      allDiseasesChartInstance = new Chart(canvasHook.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: Object.keys(chartData),
+          datasets: [{ data: Object.values(chartData), backgroundColor: ['#4e79a7', '#e15759'], borderRadius: 6 }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, border: { display: true, color: '#cbd5e1' } },
+            y: { display: false, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderPieChart(diseaseDistribution) {
+      const pieCanvas = document.getElementById('diseaseSharePieCanvas');
+      if (!pieCanvas) return;
+      const entries = Object.entries(diseaseDistribution).sort((a, b) => b[1] - a[1]);
+      if (diseaseSharePieInstance !== null) { diseaseSharePieInstance.destroy(); }
+
+      const blueGradient = ['#4e79a7', '#608ebd', '#73a3d1', '#87b7e3', '#9ccbf3', '#b2dcfd', '#c7eaff', '#def3ff'];
+      diseaseSharePieInstance = new Chart(pieCanvas.getContext('2d'), {
+        type: 'pie',
+        data: {
+          labels: entries.map(e => e[0]),
+          datasets: [{ data: entries.map(e => e[1]), backgroundColor: entries.map((_, idx) => blueGradient[idx % blueGradient.length]) }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'right' } }
+        }
+      });
+    }
+
+    /* INFORMATIVE & NON-REDUNDANT EPIDEMIOLOGICAL ANALYSIS REPORT */
+    function compileAutomaticNarrative(records, disease) {
+      const container = document.getElementById("narrativeReportText");
+      if (!container) return;
+      
+      if (!records || records.length === 0) {
+        container.innerHTML = "No surveillance records found matching the active filter selections.";
+        return;
+      }
+
+      const total = records.length;
+      let done = 0, pending = 0, alive = 0, death = 0;
+      let suspect = 0, probable = 0, confirmed = 0;
+      let male = 0, female = 0;
+      let brgyMap = {}, hcMap = {}, ageGroupMap = {};
+
+      records.forEach(item => {
+        let rem = String(item.investigationRemarks || '').toUpperCase();
+        let out = String(item.outcome || '').toUpperCase();
+        let cls = String(item.classification || '').toUpperCase();
+        let sex = String(item.sex || '').toUpperCase();
+
+        if (rem.includes('DONE')) done++;
+        if (rem.includes('PENDING')) pending++;
+        if (out.includes('ALIVE')) alive++;
+        if (out.includes('DEATH') || out.includes('DIED')) death++;
+
+        if (cls.includes('CONFIRM') || cls.includes('POS')) confirmed++;
+        else if (cls.includes('PROBABLE')) probable++;
+        else suspect++;
+
+        if (sex === 'MALE') male++;
+        else if (sex === 'FEMALE') female++;
+
+        if (item.barangay) brgyMap[item.barangay] = (brgyMap[item.barangay] || 0) + 1;
+        if (item.healthCenter) hcMap[item.healthCenter] = (hcMap[item.healthCenter] || 0) + 1;
+
+        let age = item.age;
+        if (age !== null && !isNaN(age)) {
+          let bracket = age <= 10 ? 'Pediatric (0-10 y.o.)' : (age <= 20 ? 'Adolescent (11-20 y.o.)' : (age <= 50 ? 'Adult (21-50 y.o.)' : 'Senior (51+ y.o.)'));
+          ageGroupMap[bracket] = (ageGroupMap[bracket] || 0) + 1;
+        }
+      });
+
+      // Find top clusters
+      let topBrgy = "N/A", maxB = 0;
+      for (let b in brgyMap) { if (brgyMap[b] > maxB) { maxB = brgyMap[b]; topBrgy = b; } }
+      let topBrgyPct = total > 0 ? ((maxB / total) * 100).toFixed(1) : 0;
+
+      let topHc = "N/A", maxH = 0;
+      for (let h in hcMap) { if (hcMap[h] > maxH) { maxH = hcMap[h]; topHc = h; } }
+
+      let topAge = "General Population", maxA = 0;
+      for (let a in ageGroupMap) { if (ageGroupMap[a] > maxA) { maxA = ageGroupMap[a]; topAge = a; } }
+
+      let malePct = total > 0 ? ((male / total) * 100).toFixed(1) : 0;
+      let femalePct = total > 0 ? ((female / total) * 100).toFixed(1) : 0;
+      let auditRate = total > 0 ? ((done / total) * 100).toFixed(1) : 0;
+      let cfr = total > 0 ? ((death / total) * 100).toFixed(2) : "0.00";
+      let diseaseLabel = disease === "ALL DISEASES" ? "all tracked disease entities" : disease;
+
+      let reportHtml = `
+        <div style="font-size:12.5px; line-height:1.65; color:var(--text-secondary);">
+          <p class="mb-2">
+            <strong>1. Epidemiological Profile & Clustering:</strong> A total of <span class="highlight-data">${total.toLocaleString()} case logs</span> are documented for <span class="highlight-data">${diseaseLabel}</span> across District 2. The primary focal cluster is concentrated in <span class="highlight-data">Barangay ${topBrgy}</span> accounting for <strong>${topBrgyPct}%</strong> (${maxB} cases) of the disease burden, primarily routed through <strong>${topHc}</strong>.
+          </p>
+          <p class="mb-2">
+            <strong>2. Demographics & Risk Distribution:</strong> Gender profiling indicates a distribution of <span class="highlight-data">${malePct}% Male</span> vs <span class="highlight-data">${femalePct}% Female</span>. The highest age vulnerability is concentrated among the <span class="highlight-data">${topAge}</span> bracket.
+          </p>
+          <p class="mb-2">
+            <strong>3. Clinical Severity & Outcome:</strong> Case severity breakdown registers <span class="highlight-data">${confirmed} Confirmed</span>, <span class="highlight-data">${probable} Probable</span>, and <span class="highlight-data">${suspect} Suspect</span> diagnoses. Documented recoveries stand at <strong>${alive} (${((alive/total)*100).toFixed(1)}%)</strong> with <strong>${death} deaths</strong> (Case Fatality Rate: <span class="highlight-data">${cfr}%</span>).
+          </p>
+          <p class="mb-0">
+            <strong>4. Field Verification & Surveillance Status:</strong> Surveillance officers have completed field investigations on <span class="highlight-data">${auditRate}%</span> of total reports (${done} closed cases), leaving <strong>${pending} pending audits</strong> under active follow-up.
+          </p>
+        </div>
+      `;
+
+      container.innerHTML = reportHtml;
+    }
+
+    /* SMART CIF/CRF DIRECT COMPUTER UPLOAD & DOWNLOAD */
+    function handleCifFieldClick(input) {
+      const val = input.value.trim();
+      if (!val) {
+        document.getElementById("pdsFileInput").click();
+      } else {
+        const caseId = document.getElementById("CASE_ID").value.trim() || "PATIENT";
+        downloadPdsFile(val, caseId);
+      }
+    }
+
+    function handlePdsFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      if (file.name.endsWith('.json')) {
+        reader.onload = function(e) {
+          try {
+            const parsed = JSON.parse(e.target.result);
+            if (typeof parsed === 'object') {
+              HEADERS.forEach(h => {
+                const el = document.getElementById(h);
+                if (el && parsed[h] !== undefined) el.value = parsed[h];
+              });
+              showToast("Patient Profile auto-populated from JSON.");
+            }
+          } catch(err) {}
+          document.getElementById("CIF/CRF").value = file.name;
+        };
+        reader.readAsText(file);
+      } else {
+        reader.onload = function(e) {
+          document.getElementById("CIF/CRF").value = e.target.result;
+          showToast(`Attached PDS: ${file.name}`);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function downloadPdsFile(fileDataOrUrl, caseId = 'PDS_File') {
+      if (!fileDataOrUrl) {
+        showToast("No PDS file attached to download.");
+        return;
+      }
+      fileDataOrUrl = decodeURIComponent(fileDataOrUrl);
+
+      if (fileDataOrUrl.includes("drive.google.com")) {
+        let directUrl = fileDataOrUrl;
+        const match = fileDataOrUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || fileDataOrUrl.match(/id=([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+          directUrl = `https://drive.google.com/uc?export=download&id=${match[1]}`;
+        }
+        window.open(directUrl, '_blank');
+        return;
+      }
+
+      if (fileDataOrUrl.startsWith("data:") || fileDataOrUrl.startsWith("{")) {
+        let downloadUrl = fileDataOrUrl;
+        let ext = 'pdf';
+        if (fileDataOrUrl.startsWith("{")) {
+          const blob = new Blob([fileDataOrUrl], { type: 'application/json' });
+          downloadUrl = URL.createObjectURL(blob);
+          ext = 'json';
+        }
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `PDS_${caseId}_Document.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+
+      const a = document.createElement('a');
+      a.href = fileDataOrUrl;
+      a.download = `PDS_${caseId}`;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function exportPatientProfileJson() {
+      let formData = {};
+      HEADERS.forEach(header => {
+        const field = document.getElementById(header);
+        formData[header] = field ? field.value.trim() : "";
+      });
+
+      const caseId = formData["CASE_ID"] || "Patient";
+      const blob = new Blob([JSON.stringify(formData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Patient_${caseId}_Profile_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("Downloaded Patient Profile JSON.");
+    }
+
+    function initMasterPortalHeaders() {
+      const tableHeaders = document.getElementById("tableHeaders");
+      if (!tableHeaders) return;
+      HEADERS.forEach(h => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        tableHeaders.appendChild(th);
+      });
+    }
+
+    function initMasterPortalValidation() {
+      const form = document.getElementById("dataForm");
+      if (!form) return;
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        const rowIndex = document.getElementById("rowIndex").value;
+        let formData = {};
+        HEADERS.forEach(header => {
+          const field = document.getElementById(header);
+          formData[header] = field ? field.value.trim() : "";
+        });
+
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(function(response) {
+              if (response && response.success) {
+                resetMasterForm();
+                loadMasterRecords();
+                showToast(response.message);
+              }
+            })
+            .saveRecord(formData, rowIndex ? parseInt(rowIndex) : null);
+        }
+      });
+      const cancelBtn = document.getElementById("cancelBtn");
+      if (cancelBtn) cancelBtn.addEventListener("click", resetMasterForm);
+    }
+
+    function loadMasterRecords() {
+      if (!isAuthenticated) return;
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(records) {
+            cachedRecords = records || [];
+            renderMasterTable(cachedRecords);
+          })
+          .getRecords();
+      }
+    }
+
+    function renderMasterTable(records) {
+      const tableBody = document.getElementById("tableBody");
+      const recordCount = document.getElementById("recordCount");
+      if (!tableBody) return;
+      tableBody.innerHTML = "";
+      if (recordCount) recordCount.textContent = `${records.length} Record${records.length === 1 ? "" : "s"}`;
+
+      if (!records || records.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="${HEADERS.length + 1}" class="text-center py-4 text-muted">No records found.</td></tr>`;
+        return;
+      }
+
+      records.forEach((record, index) => {
+        const row = document.createElement("tr");
+        const rowIdx = record._rowIndex || (index + 2);
+        const caseId = record["CASE_ID"] || "ID";
+
+        const actionTd = document.createElement("td");
+        actionTd.className = "sticky-actions";
+        actionTd.innerHTML = `<button class="btn-edit" onclick="populateForEdit(${rowIdx})">Edit</button>`;
+        row.appendChild(actionTd);
+
+        HEADERS.forEach(header => {
+          const td = document.createElement("td");
+          const val = record[header] || "";
+          if (header === "CIF/CRF") {
+            if (val && String(val).trim() !== "") {
+              td.innerHTML = `<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 fw-bold" style="font-size:11px;" onclick="downloadPdsFile('${encodeURIComponent(val)}', '${caseId}')"><i class="fa-solid fa-download me-1"></i> Download PDS</button>`;
+            } else {
+              td.innerHTML = `<span class="badge bg-light text-muted border cursor-pointer" onclick="populateForEdit(${rowIdx}); document.getElementById('pdsFileInput').click();"><i class="fa-solid fa-upload me-1"></i> Click to Upload</span>`;
+            }
+          } else {
+            td.textContent = val;
+          }
+          row.appendChild(td);
+        });
+        tableBody.appendChild(row);
+      });
+    }
+
+    function populateForEdit(rowIndex) {
+      resetMasterForm();
+      const record = cachedRecords.find(r => (r._rowIndex || r.rowIndex) === rowIndex);
+      if (!record) return;
+
+      document.getElementById("rowIndex").value = record._rowIndex || record.rowIndex;
+      HEADERS.forEach(header => {
+        const field = document.getElementById(header);
+        if (field) {
+          let val = record[header] || "";
+          if (field.type === "date" && val) {
+            const parsedDate = new Date(val);
+            if (!isNaN(parsedDate.getTime())) val = parsedDate.toISOString().split("T")[0];
+          }
+          field.value = val;
+        }
+      });
+
+      const submitBtn = document.getElementById("submitBtn");
+      const cancelBtn = document.getElementById("cancelBtn");
+      if (submitBtn) submitBtn.innerHTML = `<i class="fa-solid fa-pen-to-square me-1"></i> Update Record`;
+      if (cancelBtn) cancelBtn.style.display = "inline-block";
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetMasterForm() {
+      const form = document.getElementById("dataForm");
+      if (!form) return;
+      form.reset();
+      document.getElementById("rowIndex").value = "";
+      document.getElementById("CIF/CRF").value = "";
+      document.getElementById("pdsFileInput").value = "";
+      const submitBtn = document.getElementById("submitBtn");
+      const cancelBtn = document.getElementById("cancelBtn");
+      if (submitBtn) submitBtn.innerHTML = `<i class="fa-solid fa-floppy-disk me-1"></i> Save Entry`;
+      if (cancelBtn) cancelBtn.style.display = "none";
+    }
+
+    function onBarangayChanged() {
+      const selectedBarangay = document.getElementById("selBarangay").value.toUpperCase().trim();
+      const healthCenterCard = document.getElementById("healthCenterFilterCard");
+      if (selectedBarangay === "ALL BARANGAY") {
+        if (healthCenterCard) {
+          healthCenterCard.classList.remove("visible");
+          healthCenterCard.classList.add("hidden");
+        }
+        buildSelectorFromMap("selCenter", ["ALL HEALTH CENTERS"].concat(masterHealthCenters));
+      } else {
+        if (healthCenterCard) {
+          healthCenterCard.classList.remove("hidden");
+          healthCenterCard.classList.add("visible");
+        }
+        const mappedCenters = healthCenterMap[selectedBarangay] || masterHealthCenters;
+        buildSelectorFromMap("selCenter", ["ALL HEALTH CENTERS"].concat(mappedCenters));
+      }
+      runFilterPipeline();
+    }
+
+    function onHealthCenterChanged() { runFilterPipeline(); }
+    function onCategoryChanged() { runFilterPipeline(); }
+    function onRemarksChanged() { runFilterPipeline(); }
+
+    function buildSelectorFromMap(id, elements) {
+      const dropdown = document.getElementById(id);
+      if (!dropdown) return;
+      dropdown.innerHTML = ""; 
+      elements.forEach(val => {
+        if (val) {
+          const opt = document.createElement("option");
+          opt.value = val; opt.textContent = val; dropdown.appendChild(opt);
+        }
+      });
+    }
+
+    function buildSelectorFromDefaultOptions(id, elements, defaultTxt) {
+      const dropdown = document.getElementById(id);
+      if (!dropdown) return;
+      dropdown.innerHTML = '<option value="' + defaultTxt + '">' + defaultTxt + '</option>';
+      elements.forEach(val => {
+        if (val) {
+          const opt = document.createElement("option");
+          opt.value = val; opt.textContent = val; dropdown.appendChild(opt);
+        }
+      });
+    }
+
+    function resetActiveFilters() {
+      const elBrgy = document.getElementById("selBarangay");
+      const elDis = document.getElementById("selDisease");
+      const elCat = document.getElementById("selCategory");
+      const elRem = document.getElementById("selRemarks");
+      const elOut = document.getElementById("selOutcome");
+
+      if (elBrgy) elBrgy.value = "All Barangay";
+      if (elDis) elDis.value = "All Diseases";
+      if (elCat) elCat.value = "All Categories";
+      if (elRem) elRem.value = "All Remarks";
+      if (elOut) elOut.value = "All Outcomes";
+
+      buildSelectorFromMap("selCenter", ["ALL HEALTH CENTERS"].concat(masterHealthCenters));
+      const healthCenterCard = document.getElementById("healthCenterFilterCard");
+      if (healthCenterCard) {
+        healthCenterCard.classList.remove("visible");
+        healthCenterCard.classList.add("hidden");
+      }
+      runFilterPipeline();
+    }
+
+    function runFilterPipeline() {
+      const targetBarangay = (document.getElementById("selBarangay")?.value || "").toUpperCase().trim();
+      const targetCenter = (document.getElementById("selCenter")?.value || "").toUpperCase().trim();
+      const targetCategory = (document.getElementById("selCategory")?.value || "").toUpperCase().trim(); 
+      const targetDisease = (document.getElementById("selDisease")?.value || "").toUpperCase().trim();
+      const targetRemarks = (document.getElementById("selRemarks")?.value || "").toUpperCase().trim();
+      const targetOutcome = (document.getElementById("selOutcome")?.value || "").toUpperCase().trim();
+
+      const recordsFiltered = datasetCache.filter(function(item) {
+        let match = true;
+        if (targetBarangay && targetBarangay !== "ALL BARANGAY") {
+          let itemBrgy = String(item.barangay || "").toUpperCase().trim();
+          if (itemBrgy !== targetBarangay && !itemBrgy.includes(targetBarangay)) match = false;
+        }
+        if (targetDisease && targetDisease !== "ALL DISEASES") {
+          let itemDisease = String(item.diseaseName || "").toUpperCase().trim();
+          if (itemDisease !== targetDisease) match = false;
+        }
+        if (targetCenter && targetCenter !== "ALL HEALTH CENTERS") {
+          let itemCenter = String(item.healthCenter || "").toUpperCase().trim();
+          if (itemCenter !== targetCenter && !itemCenter.includes(targetCenter)) match = false;
+        }
+        if (targetCategory && targetCategory !== "ALL CATEGORIES") {
+          let itemClass = String(item.classification || "").toUpperCase().trim();
+          if (itemClass !== targetCategory) match = false;
+        }
+        if (targetRemarks && targetRemarks !== "ALL REMARKS") {
+          let rem = String(item.investigationRemarks || "").toUpperCase();
+          if (targetRemarks === "DONE" && !rem.includes("DONE")) match = false;
+          if (targetRemarks === "PENDING" && !rem.includes("PENDING")) match = false;
+        }
+        if (targetOutcome && targetOutcome !== "ALL OUTCOMES") {
+          let out = String(item.outcome || "").toUpperCase();
+          if (targetOutcome === "DEATH" && out !== "DEATH" && out !== "DIED") match = false;
+          if (targetOutcome === "ALIVE" && out !== "ALIVE") match = false;
+        }
+        return match;
+      });
+
+      evaluateDashboardLayout();
+      renderCalculatedKPIs(recordsFiltered);
+      generateDynamicEpiCurve(recordsFiltered, targetDisease || "ALL DISEASES");
+      generateDemographicPyramid(recordsFiltered, targetDisease || "ALL DISEASES");
+      generateAgeGroupAnalysisChart(recordsFiltered);
+      compileAutomaticNarrative(recordsFiltered, targetDisease || "ALL DISEASES");
+      plotGeospatialMarkers(recordsFiltered, targetDisease || "ALL DISEASES");
+      generateAllDiseasesBreakdownChart(recordsFiltered, targetDisease || "ALL DISEASES");
+      generateBarangayDistributionChart(recordsFiltered, targetBarangay || "ALL BARANGAY");
+      generateCaseClassificationChart(recordsFiltered);
+    }
+
+    function evaluateDashboardLayout() {
+      const diseaseDropdown = document.getElementById('selDisease');
+      const allDiseasesView = document.getElementById('allDiseasesGraphSection');
+      const singleDiseaseView = document.getElementById('granularDiseaseMetricsSection');
+      const ageGroupChartView = document.getElementById('ageGroupChartSection');
+      const combinedBarangayAndClassSection = document.getElementById('barangayAndClassificationSection');
+      const metricCards = document.getElementById('metricCardsSection');
+
+      if (!diseaseDropdown) return;
+      const isAllDiseasesSelected = String(diseaseDropdown.value || "").toUpperCase().trim() === "ALL DISEASES" || String(diseaseDropdown.value || "") === "";
+
+      if (isAllDiseasesSelected) {
+        if (allDiseasesView) allDiseasesView.style.display = "block";
+        if (ageGroupChartView) ageGroupChartView.style.display = "block";
+        if (combinedBarangayAndClassSection) combinedBarangayAndClassSection.style.display = "block";
+        if (singleDiseaseView) singleDiseaseView.style.display = "none";
+        if (metricCards) metricCards.style.display = "none";
+      } else {
+        if (allDiseasesView) allDiseasesView.style.display = "none";
+        if (ageGroupChartView) ageGroupChartView.style.display = "none";
+        if (combinedBarangayAndClassSection) combinedBarangayAndClassSection.style.display = "none";
+        if (singleDiseaseView) singleDiseaseView.style.display = "block";
+        if (metricCards) metricCards.style.display = "block";
+      }
+    }
+
+    function renderCalculatedKPIs(subset) {
+      const grandTotal = subset.length;
+      let done = 0, pending = 0, alive = 0, death = 0;
+      subset.forEach(function(item) {
+        let rems = String(item.investigationRemarks || "").toUpperCase();
+        let outc = String(item.outcome || "").toUpperCase();
+        if (rems.includes("DONE")) done++;
+        if (rems.includes("PENDING")) pending++;
+        if (outc === "ALIVE") alive++;
+        if (outc === "DEATH" || outc === "DIED") death++;
+      });
+
+      const elTotal = document.getElementById("valTotal");
+      if (elTotal) elTotal.innerText = grandTotal.toLocaleString();
+      populateKpiBlock("valDone", "lblDone", done, grandTotal);
+      populateKpiBlock("valPending", "lblPending", pending, grandTotal);
+      populateKpiBlock("valAlive", "lblAlive", alive, grandTotal);
+      populateKpiBlock("valDeath", "lblDeath", death, grandTotal);
+    }
+
+    function populateKpiBlock(valId, lblId, value, baseline) {
+      let ratio = baseline !== 0 ? ((value / baseline) * 100).toFixed(2) : "0.00";
+      const valEl = document.getElementById(valId);
+      const lblEl = document.getElementById(lblId);
+      if (valEl) valEl.innerText = value.toLocaleString();
+      if (lblEl) lblEl.innerText = ratio + "% of total";
+    }
+  </script>
+</body>
+</html>
