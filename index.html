@@ -1044,6 +1044,15 @@
           <div class="data-status-title">DATA STATUS</div>
           <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3">
             <div class="col">
+            <div class="data-status-card" style="border-left: 4px solid #de7a38;">
+              <div class="data-status-label">LIVE SYSTEM STATUS</div>
+              <div class="data-status-val">
+                <i class="fa-solid fa-tower-broadcast" style="color: #de7a38; margin-right: 8px;"></i> 
+                <span id="live-status" style="font-weight: 800;">Connecting...</span>
+              </div>
+            </div>
+          </div>
+            <div class="col">
               <div class="data-status-card" onclick="switchTab('overview')">
                 <div class="data-status-label">ACTIVE CASES (Influenza / Dengue)</div>
                 <div class="data-status-val"><i class="fa-solid fa-chart-line text-primary"></i> Live Trend Active</div>
@@ -3080,5 +3089,42 @@
       if (lblEl) lblEl.innerText = ratio + "% of total";
     }
   </script>
+
+  <script type="module">
+  // 1. Import the "brain" of Firebase
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  // 2. Your specific configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDiQ6xWlpOsJeu1ggf0sb0Uqs073YBQqmk",
+    authDomain: "d2-surveillance-portal.firebaseapp.com",
+    databaseURL: "https://d2-surveillance-portal-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    projectId: "d2-surveillance-portal",
+    storageBucket: "d2-surveillance-portal.firebasestorage.app",
+    messagingSenderId: "607201393356",
+    appId: "1:607201393356:web:ac622715863dcd2a2fe069",
+    measurementId: "G-N1ZMNH7Z2F"
+  };
+
+  // 3. Initialize
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // 4. THE REAL-TIME MAGIC
+  // This listens to a value called "status" in your database
+  const statusRef = ref(db, 'status'); 
+  
+  onValue(statusRef, (snapshot) => {
+    const data = snapshot.val();
+    console.log("Database update:", data);
+    
+    // This finds the element on your page with id="live-status" and updates it
+    const statusElement = document.getElementById('live-status');
+    if (statusElement) {
+        statusElement.innerText = data || "No data";
+    }
+  });
+</script>
 </body>
 </html>
